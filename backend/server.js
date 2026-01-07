@@ -7,7 +7,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Aumentado limite para imports grandes
 app.use(cors());
 
 // --- CONEXÃO BANCO ---
@@ -22,14 +22,6 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-// --- EMAIL CONFIG ---
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: true,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-});
-
 // --- MIDDLEWARE DE SEGURANÇA ---
 function verifyToken(req, res, next) {
     const tokenHeader = req.headers['authorization'];
@@ -42,7 +34,7 @@ function verifyToken(req, res, next) {
     });
 }
 
-// --- ROTAS DE AUTH (Mantidas) ---
+// --- ROTAS DE AUTH ---
 app.post('/auth/register', async (req, res) => {
     const { name, email, password } = req.body;
     db.query('SELECT email FROM users WHERE email = ?', [email], async (err, results) => {
@@ -66,7 +58,7 @@ app.post('/auth/login', (req, res) => {
     });
 });
 
-// --- NOVAS ROTAS DE DADOS (MySQL) ---
+// --- ROTAS DE DADOS ---
 
 // 1. BIBLIOTECA
 app.get('/api/library', verifyToken, (req, res) => {
@@ -78,7 +70,6 @@ app.get('/api/library', verifyToken, (req, res) => {
 
 app.post('/api/library', verifyToken, (req, res) => {
     const recipe = req.body;
-    // Remove anterior se existir e insere novo (Simples e eficaz)
     db.query('DELETE FROM recipes WHERE user_id = ? AND front_id = ?', [req.userId, recipe.id], () => {
         db.query('INSERT INTO recipes (user_id, front_id, data) VALUES (?, ?, ?)', 
             [req.userId, recipe.id, JSON.stringify(recipe)], (err) => {
@@ -95,7 +86,7 @@ app.delete('/api/library/:id', verifyToken, (req, res) => {
     });
 });
 
-// 2. PLANEJADOR (ESTADO)
+// 2. PLANEJADOR
 app.get('/api/planner', verifyToken, (req, res) => {
     db.query('SELECT planner_data, themes_data FROM app_state WHERE user_id = ?', [req.userId], (err, results) => {
         if (err) return res.status(500).send(err);
@@ -127,6 +118,24 @@ app.post('/api/presets', verifyToken, (req, res) => {
         [req.userId, plan.id, plan.name, JSON.stringify(plan)], (err) => {
         if (err) return res.status(500).send(err);
         res.json({ msg: "Preset Salvo" });
+    });
+});
+
+// NOVA ROTA: Renomear Plano
+app.put('/api/presets/:id', verifyToken, (req, res) => {
+    const { name } = req.body;
+    // Precisamos buscar o JSON atual, atualizar o nome dentro dele e salvar de novo
+    db.query('SELECT data FROM saved_plans WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err, results) => {
+        if (err || results.length === 0) return res.status(500).json({ error: "Erro ou plano não encontrado" });
+        
+        let planData = results[0].data;
+        planData.name = name; // Atualiza nome no JSON
+
+        db.query('UPDATE saved_plans SET name = ?, data = ? WHERE user_id = ? AND front_id = ?', 
+            [name, JSON.stringify(planData), req.userId, req.params.id], (err) => {
+            if (err) return res.status(500).send(err);
+            res.json({ msg: "Renomeado com sucesso" });
+        });
     });
 });
 
