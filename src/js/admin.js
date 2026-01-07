@@ -35,9 +35,13 @@ window.onload = async function() {
     if(user && user.name) document.getElementById('user-display').innerText = user.name;
     
     // Configura Sidebar Mobile
-    document.getElementById('btn-open-sidebar').onclick = toggleSidebar;
-    document.getElementById('btn-close-sidebar').onclick = toggleSidebar;
-    document.getElementById('mobile-overlay').onclick = toggleSidebar;
+    const btnOpen = document.getElementById('btn-open-sidebar');
+    const btnClose = document.getElementById('btn-close-sidebar');
+    const overlay = document.getElementById('mobile-overlay');
+
+    if(btnOpen) btnOpen.onclick = toggleSidebar;
+    if(btnClose) btnClose.onclick = toggleSidebar;
+    if(overlay) overlay.onclick = toggleSidebar;
 
     // Carregamento inicial de dados
     try {
@@ -57,8 +61,8 @@ window.onload = async function() {
 function toggleSidebar() {
     const sb = document.getElementById('sidebar');
     const ov = document.getElementById('mobile-overlay');
-    sb.classList.toggle('-translate-x-full');
-    ov.classList.toggle('hidden');
+    if(sb) sb.classList.toggle('-translate-x-full');
+    if(ov) ov.classList.toggle('hidden');
 }
 
 function logout() {
@@ -233,7 +237,7 @@ function switchView(v) {
     
     // Fecha menu mobile
     const sb = document.getElementById('sidebar');
-    if(!sb.classList.contains('-translate-x-full') && window.innerWidth < 768) toggleSidebar();
+    if(sb && !sb.classList.contains('-translate-x-full') && window.innerWidth < 768) toggleSidebar();
 }
 
 function loadFileContent(input) { 
@@ -263,21 +267,30 @@ function renderPresets() {
     });
 }
 
+// CORREÇÃO: Função BLINDADA contra erros de JSON undefined
 function loadPreset(id) {
     const p = savedPlans.find(x => x.id === id);
     if(p) {
-        // Clona os dados para evitar referências cruzadas
-        library = JSON.parse(JSON.stringify(p.data.library));
-        planner = JSON.parse(JSON.stringify(p.data.planner));
-        themes = JSON.parse(JSON.stringify(p.data.themes));
+        // Proteção: Garante que 'data' existe e que seus filhos também existam
+        // antes de tentar cloná-los. Se não existirem, cria vazios.
+        const data = p.data || {};
         
-        // Atualiza banco com os dados do preset carregado para garantir sincronia
-        library.forEach(async r => {
-             await fetch(`${API_BASE}/library`, { method: 'POST', headers, body: JSON.stringify(r) });
-        });
+        library = data.library ? JSON.parse(JSON.stringify(data.library)) : [];
+        planner = data.planner ? JSON.parse(JSON.stringify(data.planner)) : { 1: {}, 2: {}, 3: {}, 4: {} };
+        themes = data.themes ? JSON.parse(JSON.stringify(data.themes)) : {};
+        
+        // Atualiza banco com os dados do preset carregado
+        if(library.length > 0) {
+            library.forEach(async r => {
+                 await fetch(`${API_BASE}/library`, { method: 'POST', headers, body: JSON.stringify(r) });
+            });
+        }
+        
         syncPlanner();
         
         renderLibrary(); renderPlanner(); loadThemesUI(); switchView('planner');
+    } else {
+        alert("Erro: Plano não encontrado.");
     }
 }
 
@@ -295,7 +308,7 @@ function renderPlanner() {
             const rid = planner[w][s]; 
             const r = library.find(x => x.id === rid);
             
-            // Design com Ícones Restaurado
+            // Design com Ícones
             if(r) {
                 h += `<td class="px-2 py-2 min-w-[140px]">
                     <div onclick="openPicker(${w},'${s}')" class="bg-white border border-blue-200 p-2 md:p-3 rounded-lg shadow-sm cursor-pointer flex items-center gap-2 md:gap-3 group/card relative h-16">
@@ -352,8 +365,13 @@ function openPreview(id) {
     const p = savedPlans.find(x=>x.id===id); if(!p) return; 
     document.getElementById('preview-title').innerText = p.name;
     document.getElementById('preview-modal').classList.remove('hidden'); 
+    
+    // Preview Simples
+    const data = p.data || {};
+    const plannerPrev = data.planner || {};
+    
     const weeks = [1,2,3,4].map(w => {
-        const meals = Object.keys(p.data.planner[w] || {}).length;
+        const meals = Object.keys(plannerPrev[w] || {}).length;
         return `Semana ${w}: ${meals} refeições`;
     }).join('\n');
     document.getElementById('preview-content').innerHTML = `<pre class="text-xs font-mono bg-slate-100 p-4 rounded">${weeks}</pre>`; 
