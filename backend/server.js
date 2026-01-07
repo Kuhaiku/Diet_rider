@@ -12,7 +12,7 @@ app.use(cors());
 
 // 1. Conexão MySQL (ATUALIZADO COM PORTA CUSTOMIZADA)
 const db = mysql.createPool({
-    host: process.env.DB_HOST,
+    host: process.env.DB_HOST ,
     port: process.env.DB_PORT, // <--- ADICIONADO: Importante para porta 3336
     user: process.env.DB_USER,
     password: process.env.DB_PASS,

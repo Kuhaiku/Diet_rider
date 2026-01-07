@@ -8,7 +8,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <script>
-        const API_URL = '/auth'; 
+        // const API_URL = '/auth'; 
+        const API_URL = 'http://localhost:3000/auth';
         const token = localStorage.getItem('token');
         if (!token) window.location.href = 'login.html';
 
@@ -151,7 +152,38 @@
         let themes = JSON.parse(localStorage.getItem('adminThemes')) || {};
         let savedPlans = JSON.parse(localStorage.getItem('dietSavedPlans')) || [];
         let pickerContext = null; let currentImportType = ''; 
+// --- FUNÇÃO QUE FALTAVA ---
+        function renderPresets() {
+            const g = document.getElementById('presets-grid');
+            if (!g) return; // Segurança caso o elemento não exista
+            g.innerHTML = '';
+            
+            if (savedPlans.length === 0) {
+                document.getElementById('empty-presets').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('empty-presets').classList.add('hidden');
 
+            savedPlans.forEach(p => {
+                g.innerHTML += `
+                <div class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-lg transition-all relative group flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-bold text-slate-800 text-lg leading-tight line-clamp-2">${p.name}</h3>
+                            <div class="flex gap-1 ml-2">
+                                <button onclick="downloadPreset('${p.id}')" class="text-slate-300 hover:text-blue-500 p-1" title="Baixar Backup"><i class="fa-solid fa-download"></i></button>
+                                <button onclick="deletePreset('${p.id}')" class="text-slate-300 hover:text-red-500 p-1" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 font-medium mb-4"><i class="fa-regular fa-calendar mr-1"></i>${p.date}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mt-auto">
+                        <button onclick="openPreview('${p.id}')" class="w-full py-2.5 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors">Ver Detalhes</button>
+                        <button onclick="loadPreset('${p.id}')" class="w-full py-2.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-md transition-transform active:scale-95">Carregar</button>
+                    </div>
+                </div>`;
+            });
+        }
         window.onload = function() {
             const urlParams = new URLSearchParams(window.location.search);
             const action = urlParams.get('action');
