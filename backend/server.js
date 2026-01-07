@@ -10,10 +10,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 1. Conexão MySQL (ATUALIZADO COM PORTA CUSTOMIZADA)
+// --- CONEXÃO BANCO ---
 const db = mysql.createPool({
-    host: process.env.DB_HOST ,
-    port: process.env.DB_PORT, // <--- ADICIONADO: Importante para porta 3336
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
@@ -22,118 +22,119 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-// Teste de conexão ao iniciar
-db.getConnection((err, connection) => {
-    if (err) {
-        console.error('❌ ERRO AO CONECTAR NO BANCO REMOTO:');
-        console.error(`Host: ${process.env.DB_HOST}`);
-        console.error(`Porta: ${process.env.DB_PORT}`);
-        console.error(`Erro: ${err.message}`);
-        console.log('Dica: Verifique se o IP do seu computador está liberado no Firewall do servidor remoto.');
-    } else {
-        console.log(`✅ Conectado ao MySQL Remoto! (${process.env.DB_HOST}:${process.env.DB_PORT})`);
-        connection.release();
-    }
-});
-
-// 2. Configuração Email
+// --- EMAIL CONFIG ---
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT,
-    secure: true, 
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
+    secure: true,
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
 
-// --- ROTAS ---
+// --- MIDDLEWARE DE SEGURANÇA ---
+function verifyToken(req, res, next) {
+    const tokenHeader = req.headers['authorization'];
+    if (!tokenHeader) return res.status(403).json({ msg: "Token ausente" });
+    const token = tokenHeader.split(' ')[1];
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) return res.status(401).json({ msg: "Token inválido" });
+        req.userId = decoded.id;
+        next();
+    });
+}
 
-// Registro
+// --- ROTAS DE AUTH (Mantidas) ---
 app.post('/auth/register', async (req, res) => {
     const { name, email, password } = req.body;
-    
     db.query('SELECT email FROM users WHERE email = ?', [email], async (err, results) => {
-        if (err) { console.error(err); return res.status(500).json({ msg: "Erro no Banco de Dados" }); }
-        if (results.length > 0) return res.status(400).json({ msg: 'Email já cadastrado.' });
-
-        const hashedPassword = await bcrypt.hash(password, 8);
-
-        db.query('INSERT INTO users SET ?', { name, email, password: hashedPassword }, (err) => {
-            if (err) { console.error(err); return res.status(500).json({ msg: "Erro ao salvar usuário" }); }
-            res.status(201).json({ msg: 'Usuário cadastrado com sucesso!' });
+        if (results.length > 0) return res.status(400).json({ msg: 'Email já existe.' });
+        const hash = await bcrypt.hash(password, 8);
+        db.query('INSERT INTO users SET ?', { name, email, password: hash }, (err) => {
+            if (err) return res.status(500).json({ error: err });
+            res.status(201).json({ msg: 'Criado!' });
         });
     });
 });
 
-// Login
 app.post('/auth/login', (req, res) => {
     const { email, password } = req.body;
-
     db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
-        if (err) { console.error(err); return res.status(500).json({ msg: "Erro interno do servidor" }); }
         if (results.length === 0 || !(await bcrypt.compare(password, results[0].password))) {
-            return res.status(401).json({ msg: 'Email ou senha incorretos.' });
+            return res.status(401).json({ msg: 'Dados incorretos.' });
         }
-
-        const id = results[0].id;
-        const token = jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.status(200).json({ msg: 'Logado!', token, user: { name: results[0].name, email } });
+        const token = jwt.sign({ id: results[0].id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        res.json({ token, user: { name: results[0].name, email } });
     });
 });
 
-// Esqueci a Senha
-app.post('/auth/forgot-password', (req, res) => {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ msg: "Email obrigatório" });
+// --- NOVAS ROTAS DE DADOS (MySQL) ---
 
-    db.query('SELECT * FROM users WHERE email = ?', [email], (err, results) => {
-        if (err) return res.status(500).json({ msg: "Erro no banco" });
-        if (results.length === 0) return res.status(404).json({ msg: "Email não encontrado" });
+// 1. BIBLIOTECA
+app.get('/api/library', verifyToken, (req, res) => {
+    db.query('SELECT data FROM recipes WHERE user_id = ?', [req.userId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        res.json(results.map(r => r.data));
+    });
+});
 
-        const token = Math.floor(100000 + Math.random() * 900000).toString();
-        // 8 horas
-        const expireDate = new Date(Date.now() + 28800000); 
-
-        db.query('UPDATE users SET reset_token = ?, reset_expires = ? WHERE email = ?', [token, expireDate, email], (err) => {
-            if (err) return res.status(500).json({ msg: "Erro ao salvar token" });
-
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: email,
-                subject: 'Recuperação de Senha - DietCMS',
-                text: `Seu código de recuperação é: ${token}\n\nEste código expira em 8 horas.`
-            };
-
-            transporter.sendMail(mailOptions, (error) => {
-                if (error) {
-                    console.log("Erro email:", error);
-                    return res.status(500).json({ msg: "Erro ao enviar email." });
-                }
-                res.status(200).json({ msg: "Código enviado para seu email!" });
-            });
+app.post('/api/library', verifyToken, (req, res) => {
+    const recipe = req.body;
+    // Remove anterior se existir e insere novo (Simples e eficaz)
+    db.query('DELETE FROM recipes WHERE user_id = ? AND front_id = ?', [req.userId, recipe.id], () => {
+        db.query('INSERT INTO recipes (user_id, front_id, data) VALUES (?, ?, ?)', 
+            [req.userId, recipe.id, JSON.stringify(recipe)], (err) => {
+            if (err) return res.status(500).send(err);
+            res.json({ msg: "Salvo" });
         });
     });
 });
 
-// Resetar Senha
-app.post('/auth/reset-password', async (req, res) => {
-    const { email, code, newPassword } = req.body;
-
-    db.query('SELECT * FROM users WHERE email = ? AND reset_token = ?', [email, code], async (err, results) => {
-        if (err) return res.status(500).json({ msg: "Erro interno" });
-        if (results.length === 0) return res.status(400).json({ msg: "Código inválido ou email incorreto." });
-        
-        const user = results[0];
-        if (new Date() > new Date(user.reset_expires)) return res.status(400).json({ msg: "Código expirado." });
-
-        const hashedPassword = await bcrypt.hash(newPassword, 8);
-
-        db.query('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?', [hashedPassword, user.id], (err) => {
-            if (err) return res.status(500).json({ msg: "Erro ao atualizar senha" });
-            res.status(200).json({ msg: "Senha alterada com sucesso!" });
-        });
+app.delete('/api/library/:id', verifyToken, (req, res) => {
+    db.query('DELETE FROM recipes WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err) => {
+        if (err) return res.status(500).send(err);
+        res.json({ msg: "Deletado" });
     });
 });
 
-app.listen(3000, () => console.log('🚀 Backend rodando na porta 3000'));
+// 2. PLANEJADOR (ESTADO)
+app.get('/api/planner', verifyToken, (req, res) => {
+    db.query('SELECT planner_data, themes_data FROM app_state WHERE user_id = ?', [req.userId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        res.json(results[0] || { planner_data: {}, themes_data: {} });
+    });
+});
+
+app.post('/api/planner', verifyToken, (req, res) => {
+    const { planner, themes } = req.body;
+    const sql = `INSERT INTO app_state (user_id, planner_data, themes_data) VALUES (?, ?, ?) 
+                 ON DUPLICATE KEY UPDATE planner_data = VALUES(planner_data), themes_data = VALUES(themes_data)`;
+    db.query(sql, [req.userId, JSON.stringify(planner), JSON.stringify(themes)], (err) => {
+        if (err) return res.status(500).send(err);
+        res.json({ msg: "Estado Salvo" });
+    });
+});
+
+// 3. PLANOS SALVOS (PRESETS)
+app.get('/api/presets', verifyToken, (req, res) => {
+    db.query('SELECT data FROM saved_plans WHERE user_id = ? ORDER BY created_at DESC', [req.userId], (err, results) => {
+        if (err) return res.status(500).send(err);
+        res.json(results.map(r => r.data));
+    });
+});
+
+app.post('/api/presets', verifyToken, (req, res) => {
+    const plan = req.body;
+    db.query('INSERT INTO saved_plans (user_id, front_id, name, data) VALUES (?, ?, ?, ?)', 
+        [req.userId, plan.id, plan.name, JSON.stringify(plan)], (err) => {
+        if (err) return res.status(500).send(err);
+        res.json({ msg: "Preset Salvo" });
+    });
+});
+
+app.delete('/api/presets/:id', verifyToken, (req, res) => {
+    db.query('DELETE FROM saved_plans WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err) => {
+        if (err) return res.status(500).send(err);
+        res.json({ msg: "Preset Deletado" });
+    });
+});
+
+app.listen(3000, () => console.log('🚀 API Rodando na porta 3000'));
