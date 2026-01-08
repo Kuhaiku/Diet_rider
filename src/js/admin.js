@@ -9,6 +9,24 @@ const AUTH_URL = IS_DEV
 
 console.log(`🔌 Conectando API em: ${API_BASE}`);
 
+// --- LISTA DE ÍCONES (Adicionado para corrigir o bug do select vazio) ---
+const ICON_OPTIONS = [
+    { val: 'fa-utensils', label: 'Geral' },
+    { val: 'fa-mug-hot', label: 'Café' },
+    { val: 'fa-bread-slice', label: 'Pão/Massas' },
+    { val: 'fa-apple-alt', label: 'Fruta' },
+    { val: 'fa-carrot', label: 'Legumes' },
+    { val: 'fa-leaf', label: 'Salada' },
+    { val: 'fa-drumstick-bite', label: 'Frango' },
+    { val: 'fa-hamburger', label: 'Carne' },
+    { val: 'fa-fish', label: 'Peixe' },
+    { val: 'fa-egg', label: 'Ovos' },
+    { val: 'fa-soup', label: 'Sopa' },
+    { val: 'fa-cheese', label: 'Queijo' },
+    { val: 'fa-bolt', label: 'Energia' },
+    { val: 'fa-moon', label: 'Jantar' }
+];
+
 // --- VERIFICAÇÃO DE LOGIN ---
 const token = localStorage.getItem("token");
 if (!token) window.location.href = "login.html";
@@ -26,7 +44,7 @@ let savedPlans = [];
 let pickerContext = null;
 let currentImportType = "";
 let currentPreviewId = null;
-let selectedRecipes = new Set(); // <--- Para seleção múltipla
+let selectedRecipes = new Set(); 
 
 // --- TEMPLATES ---
 const TEMPLATE_PLAN = `Atue como um Nutricionista Sênior. Gere um JSON válido com um plano mensal (4 semanas). SEU PERFIL: [PERFIL]. REGRAS: "ingredients" usa "q_daily" em 'g' ou 'ml'. JSON: { "library": [{ "id": "rec_01", "name": "Nome", "cat": "almoco", "icon": "fa-drumstick-bite", "ingredients": [{"n": "Item", "q_daily": 200, "u": "g", "cat": "carnes"}], "steps": ["Passo"] }], "planner": { "1": { "almoco": "rec_01" } }, "themes": { "1": "Tema" } }`;
@@ -121,6 +139,7 @@ async function loadPresets() {
 
 // --- LÓGICA & UI: BIBLIOTECA & EXPORTAÇÃO ---
 
+// !!! AQUI FOI ALTERADO PARA REMOVER O LÁPIS E TORNAR O CARD CLICÁVEL !!!
 function renderLibrary() {
   const g = document.getElementById("recipe-grid");
   g.innerHTML = "";
@@ -132,43 +151,46 @@ function renderLibrary() {
 
   library.forEach((r) => {
     const isSelected = selectedRecipes.has(r.id);
-    g.innerHTML += `
+    
+    // Div principal agora tem onclick para abrir o modal
+    const cardHtml = `
         <div class="bg-white border ${
           isSelected
             ? "border-indigo-500 ring-1 ring-indigo-500"
             : "border-slate-200"
-        } rounded-xl p-4 hover:shadow-md relative group transition-all">
+        } rounded-xl p-4 hover:shadow-md relative group transition-all cursor-pointer" onclick="openRecipeModal('${r.id}')">
+            
             <div class="flex justify-between mb-2">
                 <div class="flex items-center gap-2">
-                    <div onclick="toggleRecipeSelection('${
-                      r.id
-                    }')" class="w-8 h-8 rounded cursor-pointer flex items-center justify-center transition-colors ${
-      isSelected
-        ? "bg-indigo-600 text-white"
-        : "bg-slate-100 text-slate-300 hover:bg-slate-200"
-    }">
+                    <div onclick="event.stopPropagation(); toggleRecipeSelection('${r.id}')" 
+                         class="w-8 h-8 rounded cursor-pointer flex items-center justify-center transition-colors ${
+                            isSelected ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-300 hover:bg-slate-200"
+                         }">
                         <i class="fa-solid fa-check"></i>
                     </div>
+                    
                     <span class="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
                         <i class="fa-solid ${r.icon || "fa-utensils"}"></i>
                     </span>
                 </div>
+                
                 <div class="flex gap-1">
-                    <button onclick="if(confirm('Editar?')) openRecipeModal('${
-                      r.id
-                    }')" class="text-slate-300 hover:text-blue-500 p-1"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="deleteRecipe('${
-                      r.id
-                    }', event)" class="text-slate-300 hover:text-red-500 p-1"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="deleteRecipe('${r.id}', event)" class="text-slate-300 hover:text-red-500 p-1 delete-btn">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
                 </div>
             </div>
-            <h4 class="font-bold text-slate-800 text-sm mb-1 cursor-pointer" onclick="openRecipeModal('${
-              r.id
-            }')">${r.name}</h4>
-            <span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase font-bold">${
-              r.cat
-            }</span>
+            
+            <h4 class="font-bold text-slate-800 text-sm mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                ${r.name}
+            </h4>
+            
+            <span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase font-bold">
+                ${r.cat}
+            </span>
         </div>`;
+        
+    g.innerHTML += cardHtml;
   });
   updateExportButton();
 }
@@ -311,7 +333,7 @@ function sanitizeRecipe(r) {
   return r;
 }
 
-// --- CRUD BIBLIOTECA & PLANNER (Mantido igual) ---
+// --- CRUD BIBLIOTECA & PLANNER ---
 
 async function saveRecipeToLibrary() {
   const id = document.getElementById("edit-id").value || "rec_" + Date.now();
@@ -324,6 +346,7 @@ async function saveRecipeToLibrary() {
     if (n) {
       let q = parseFloat(r.querySelector(".i-q").value) || 0;
       let u = r.querySelector(".i-u").value.toLowerCase();
+      // Conversão simples para garantir uniformidade se vier kg/l do input manual
       if (u === "kg") {
         q *= 1000;
         u = "g";
@@ -837,11 +860,26 @@ function processImport() {
     alert("Erro no JSON: " + e.message);
   }
 }
+
+// !!! AQUI FOI ALTERADO PARA POPULAR O SELECT DE ÍCONES !!!
 function openRecipeModal(id) {
   document.getElementById("recipe-modal").classList.remove("hidden");
   document.getElementById("edit-id").value = id || "";
   document.getElementById("rec-ingredients").innerHTML = "";
   document.getElementById("rec-steps").innerHTML = "";
+  
+  // POPULAR SELECT DE ÍCONES (CORREÇÃO)
+  const iconSelect = document.getElementById("rec-icon");
+  if(iconSelect) {
+      iconSelect.innerHTML = '';
+      ICON_OPTIONS.forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt.val;
+          option.textContent = opt.label;
+          iconSelect.appendChild(option);
+      });
+  }
+
   const r = id
     ? library.find((x) => x.id === id)
     : {
@@ -853,7 +891,11 @@ function openRecipeModal(id) {
       };
   document.getElementById("rec-name").value = r.name;
   document.getElementById("rec-cat").value = r.cat;
-  document.getElementById("rec-icon").value = r.icon;
+  
+  // Verificar se ícone existe na lista, se não, usa padrão
+  const iconExists = ICON_OPTIONS.some(i => i.val === r.icon);
+  document.getElementById("rec-icon").value = iconExists ? r.icon : "fa-utensils";
+  
   if (r.ingredients)
     r.ingredients.forEach((i) => {
       addRecLine();
