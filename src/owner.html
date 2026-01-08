@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Painel do Dono | Diet & Ride</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
@@ -15,19 +15,26 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        /* Ajuste inputs mobile */
+        @media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
     </style>
 </head>
 <body class="flex overflow-hidden text-slate-800 bg-slate-50">
 
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col h-full z-20 shadow-sm hidden md:flex">
-        <div class="p-6 border-b border-slate-100 flex items-center gap-2">
-            <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-red-200">
-                <i class="fa-solid fa-crown"></i>
+    <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden fade-in"></div>
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 shadow-2xl md:shadow-sm transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col h-full">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between h-16">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-red-200">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <h1 class="font-bold text-xl text-slate-800 tracking-tight">Super Admin</h1>
             </div>
-            <h1 class="font-bold text-xl text-slate-800 tracking-tight">Super Admin</h1>
+            <button onclick="toggleSidebar()" class="md:hidden text-slate-400"><i class="fa-solid fa-xmark text-xl"></i></button>
         </div>
 
-        <nav class="flex-1 p-4 space-y-1">
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
             <button onclick="switchView('dashboard')" id="nav-dashboard" class="flex items-center w-full px-4 py-3 text-sm font-bold bg-slate-50 text-slate-700 rounded-lg mb-1 transition-colors border border-slate-200">
                 <i class="fa-solid fa-chart-pie w-6 text-slate-400"></i> Dashboard
             </button>
@@ -50,11 +57,11 @@
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative h-full overflow-hidden">
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative md:ml-72 transition-all duration-300 h-full overflow-hidden">
         
-        <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:hidden flex-shrink-0">
+        <header class="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:hidden flex-shrink-0 z-30 sticky top-0">
             <div class="font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-crown text-red-600"></i> Painel Dono</div>
-            <a href="app.html" class="text-sm font-bold text-blue-600">Sair</a>
+            <button onclick="toggleSidebar()" class="p-2 text-slate-600 bg-slate-50 rounded-lg"><i class="fa-solid fa-bars text-xl"></i></button>
         </header>
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 relative">
@@ -113,7 +120,7 @@
                         <table class="w-full text-left border-collapse">
                             <thead class="bg-slate-50 border-b border-slate-200">
                                 <tr>
-                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Título</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Conteúdo</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Autor</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase">Data</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase text-right">Ação</th>
@@ -127,7 +134,7 @@
 
             <div id="view-reports" class="hidden fade-in space-y-6">
                 <h2 class="text-2xl font-bold text-slate-800">Denúncias</h2>
-                <div id="reports-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div id="reports-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     </div>
                 <div id="reports-empty" class="hidden text-center py-20 text-slate-400">
                     <i class="fa-solid fa-check-circle text-4xl mb-3 text-green-500"></i>
@@ -138,34 +145,46 @@
         </div>
     </main>
 
-    <div id="preview-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
+    <div id="preview-modal" class="fixed inset-0 bg-slate-900/80 hidden z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+            
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 class="font-bold text-lg text-slate-800">Conteúdo Denunciado</h3>
+                <h3 class="font-bold text-lg text-slate-800">Análise de Conteúdo</h3>
                 <button onclick="closePreview()" class="text-slate-400 hover:text-red-600"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div class="p-6 overflow-y-auto bg-slate-50 space-y-4 flex-1">
-                <div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">Título</span>
-                    <p class="font-bold text-xl text-slate-800" id="prev-title">...</p>
-                </div>
-                <div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">Descrição</span>
-                    <div class="bg-white p-4 rounded-lg border border-slate-200 text-slate-600 whitespace-pre-line text-sm mt-1" id="prev-desc">...</div>
-                </div>
-                <div id="prev-yt-box" class="hidden">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Vídeo Anexado</span>
-                    <div class="w-full aspect-video bg-black rounded-lg overflow-hidden">
-                        <iframe id="prev-iframe" class="w-full h-full" src="" frameborder="0" allowfullscreen></iframe>
+
+            <div class="flex border-b border-slate-200 bg-slate-50">
+                <button onclick="switchTab('visual')" id="tab-visual" class="flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 bg-white">
+                    <i class="fa-solid fa-eye mr-2"></i> Visual
+                </button>
+                <button onclick="switchTab('json')" id="tab-json" class="flex-1 py-3 text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+                    <i class="fa-solid fa-code mr-2"></i> Código (JSON)
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto bg-slate-100 p-4">
+                
+                <div id="content-visual" class="space-y-4">
+                    </div>
+
+                <div id="content-json" class="hidden space-y-4">
+                     <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Título & Descrição</span>
+                        <div class="bg-white p-3 rounded border border-slate-200 mb-2">
+                            <p class="font-bold" id="raw-title">...</p>
+                            <p class="text-sm text-slate-600" id="raw-desc">...</p>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">JSON Completo</span>
+                        <pre class="bg-slate-800 text-green-400 p-4 rounded-lg text-xs overflow-x-auto font-mono shadow-inner" id="raw-json">...</pre>
                     </div>
                 </div>
-                <div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">JSON (Receita/Plano)</span>
-                    <pre class="bg-slate-800 text-green-400 p-3 rounded-lg text-xs overflow-x-auto mt-1 font-mono" id="prev-json">...</pre>
-                </div>
+
             </div>
+
             <div class="p-4 border-t border-slate-100 bg-white flex justify-end gap-2">
-                <button onclick="closePreview()" class="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-lg">Fechar</button>
+                <button onclick="closePreview()" class="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-lg">Cancelar</button>
                 <button id="btn-delete-post" class="px-6 py-2 text-sm font-bold bg-red-600 text-white hover:bg-red-700 rounded-lg shadow-lg">Apagar Post</button>
             </div>
         </div>

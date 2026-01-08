@@ -261,22 +261,28 @@ app.post('/api/community/vote', verifyToken, (req, res) => {
     });
 });
 
+
 // 5. Excluir Post (O dono do post ou o ADMIN podem excluir)
 app.delete('/api/community/post/:id', verifyToken, (req, res) => {
-    // Verifica se é dono do post ou Admin
+    // Busca o post para saber quem é o dono dele
     db.query('SELECT user_id FROM community_posts WHERE id = ?', [req.params.id], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ msg: "Post não encontrado" });
         
         const postOwnerId = results[0].user_id;
 
-        // Checa se o usuário atual é o Dono do Sistema
-        db.query('SELECT is_owner FROM users WHERE id = ?', [req.userId], (err, userRes) => {
-            const isSystemOwner = userRes[0].is_owner === 1;
+        // Agora busca o EMAIL do usuário atual para ver se ele é o SUPREME DONO
+        db.query('SELECT email FROM users WHERE id = ?', [req.userId], (err, userRes) => {
+            if (err) return res.status(500).json({ msg: "Erro ao verificar permissão" });
 
+            const currentUserEmail = userRes[0].email;
+            const isSystemOwner = (currentUserEmail === process.env.OWNER_EMAIL); // <--- CORREÇÃO AQUI (Verifica pelo .env)
+
+            // Se não for o dono do post E não for o dono do sistema, bloqueia
             if (req.userId !== postOwnerId && !isSystemOwner) {
                 return res.status(403).json({ msg: "Não autorizado" });
             }
 
+            // Se passou, deleta
             db.query('DELETE FROM community_posts WHERE id = ?', [req.params.id], (err) => {
                 if (err) return res.status(500).json({ msg: "Erro ao deletar" });
                 res.json({ msg: "Post deletado" });
