@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Diet Admin | Gestor v40 DB</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style type="text/tailwindcss">
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -88,6 +90,11 @@
 
         <div id="view-library" class="hidden flex-1 flex flex-col h-full fade-in overflow-hidden">
             <div class="bg-white shadow-sm z-10 border-b border-slate-200 p-4 md:px-8 md:h-20 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0">
+                <div class="relative w-full md:w-64">
+    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
+    <input type="text" id="library-search" onkeyup="renderLibrary()" placeholder="Buscar receita..." 
+           class="w-full pl-8 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+</div>
                 <div class="flex items-center gap-4">
                     <div>
                         <h2 class="text-xl font-bold text-slate-800">Estoque de Receitas</h2>
@@ -115,7 +122,27 @@
     <div id="preview-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-full md:h-auto md:max-h-[80vh] flex flex-col overflow-hidden border border-slate-200"><div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white"><h3 class="font-bold text-lg text-slate-800" id="preview-title">Prévia</h3><button onclick="closePreview()" class="text-slate-400 hover:text-red-600"><i class="fa-solid fa-xmark text-xl"></i></button></div><div class="flex-1 overflow-y-auto p-6 bg-slate-50" id="preview-content"></div><div class="p-4 border-t border-slate-100 bg-white flex justify-end gap-2"><button onclick="closePreview()" class="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-lg">Fechar</button><button id="preview-confirm-btn" class="px-6 py-2 text-sm font-bold bg-slate-800 text-white hover:bg-slate-900 rounded-lg shadow-lg">Carregar</button></div></div></div>
     <div id="recipe-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center backdrop-blur-sm transition-opacity p-4"><div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-full md:h-[90vh] flex flex-col overflow-hidden border border-slate-200"><div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white"><h3 class="font-bold text-lg text-slate-800">Editor</h3><button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600"><i class="fa-solid fa-xmark"></i></button></div><div class="flex-1 overflow-y-auto p-4 space-y-6 md:p-8 bg-slate-50"><input type="hidden" id="edit-id"><div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200"><div class="grid grid-cols-1 md:grid-cols-12 gap-4"><div class="md:col-span-8"><input type="text" id="rec-name" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-lg font-bold" placeholder="Nome da Receita"></div><div class="grid grid-cols-2 gap-2 md:col-span-4 md:flex md:gap-4"><div class="w-full"><select id="rec-cat" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-3.5 text-sm"><option value="almoco">Almoço</option><option value="jantar">Jantar</option><option value="cafe">Café</option><option value="lanche">Lanche</option></select></div><div class="w-full"><select id="rec-icon" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-3.5 text-sm font-mono"><option value="fa-utensils">🍴</option><option value="fa-drumstick-bite">🍗</option><option value="fa-leaf">🥬</option><option value="fa-bolt">⚡</option><option value="fa-mug-hot">☕</option></select></div></div></div></div><div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200"><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-slate-700 text-sm">Ingredientes</h4><button onclick="addRecLine()" class="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-1.5 rounded">+ Item</button></div><div id="rec-ingredients" class="space-y-2"></div></div><div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200"><div class="flex justify-between items-center mb-4"><h4 class="font-bold text-slate-700 text-sm">Passos</h4><button onclick="addStepLine()" class="text-xs bg-blue-50 text-blue-600 font-bold px-3 py-1.5 rounded">+ Passo</button></div><div id="rec-steps" class="space-y-3"></div></div></div><div class="p-4 border-t border-slate-100 bg-white flex justify-between items-center"><button onclick="closeModal()" class="px-6 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:bg-slate-100">Cancelar</button><button onclick="saveRecipeToLibrary()" class="bg-blue-600 text-white px-8 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 shadow-lg">Salvar na Nuvem</button></div></div></div>
     <div id="picker-modal" class="fixed inset-0 bg-slate-900/40 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4"><div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"><div class="p-4 bg-slate-800 text-white flex justify-between items-center border-b border-slate-700"><h3 class="font-bold text-sm">Atribuir Receita</h3><button onclick="closePicker()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button></div><div class="p-3 bg-slate-50 border-b border-slate-200"><input type="text" id="picker-search" placeholder="Buscar..." class="w-full text-sm pl-4 py-2 rounded-lg border" onkeyup="renderPickerList()"></div><div id="picker-list" class="max-h-80 overflow-y-auto p-2 bg-white"></div></div></div>
-
+<div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[60] flex items-center justify-center backdrop-blur-sm p-4 fade-in">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 transform transition-all scale-100">
+        <div class="p-6 text-center">
+            <div class="w-14 h-14 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4 border border-red-100">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 class="font-bold text-lg text-slate-800 mb-2">Tem certeza?</h3>
+            <p class="text-sm text-slate-500 mb-6 leading-relaxed" id="confirm-msg">
+                Essa ação removerá o item permanentemente e não pode ser desfeita.
+            </p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="resolveConfirm(false)" class="flex-1 px-4 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="resolveConfirm(true)" class="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-lg shadow-red-200 transition-all">
+                    Sim, Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
     <script src="./js/admin.js"></script> 
 </body>
 </html>

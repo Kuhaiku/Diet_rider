@@ -63,7 +63,10 @@ app.post('/auth/login', (req, res) => {
 // 1. BIBLIOTECA
 app.get('/api/library', verifyToken, (req, res) => {
     db.query('SELECT data FROM recipes WHERE user_id = ?', [req.userId], (err, results) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
         res.json(results.map(r => r.data));
     });
 });
@@ -73,7 +76,10 @@ app.post('/api/library', verifyToken, (req, res) => {
     db.query('DELETE FROM recipes WHERE user_id = ? AND front_id = ?', [req.userId, recipe.id], () => {
         db.query('INSERT INTO recipes (user_id, front_id, data) VALUES (?, ?, ?)', 
             [req.userId, recipe.id, JSON.stringify(recipe)], (err) => {
-            if (err) return res.status(500).send(err);
+            if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
             res.json({ msg: "Salvo" });
         });
     });
@@ -81,7 +87,10 @@ app.post('/api/library', verifyToken, (req, res) => {
 
 app.delete('/api/library/:id', verifyToken, (req, res) => {
     db.query('DELETE FROM recipes WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
         res.json({ msg: "Deletado" });
     });
 });
@@ -89,7 +98,10 @@ app.delete('/api/library/:id', verifyToken, (req, res) => {
 // 2. PLANEJADOR
 app.get('/api/planner', verifyToken, (req, res) => {
     db.query('SELECT planner_data, themes_data FROM app_state WHERE user_id = ?', [req.userId], (err, results) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
         res.json(results[0] || { planner_data: {}, themes_data: {} });
     });
 });
@@ -99,7 +111,10 @@ app.post('/api/planner', verifyToken, (req, res) => {
     const sql = `INSERT INTO app_state (user_id, planner_data, themes_data) VALUES (?, ?, ?) 
                  ON DUPLICATE KEY UPDATE planner_data = VALUES(planner_data), themes_data = VALUES(themes_data)`;
     db.query(sql, [req.userId, JSON.stringify(planner), JSON.stringify(themes)], (err) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
         res.json({ msg: "Estado Salvo" });
     });
 });
@@ -107,7 +122,10 @@ app.post('/api/planner', verifyToken, (req, res) => {
 // 3. PLANOS SALVOS (PRESETS)
 app.get('/api/presets', verifyToken, (req, res) => {
     db.query('SELECT data FROM saved_plans WHERE user_id = ? ORDER BY created_at DESC', [req.userId], (err, results) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
         res.json(results.map(r => r.data));
     });
 });
@@ -116,7 +134,10 @@ app.post('/api/presets', verifyToken, (req, res) => {
     const plan = req.body;
     db.query('INSERT INTO saved_plans (user_id, front_id, name, data) VALUES (?, ?, ?, ?)', 
         [req.userId, plan.id, plan.name, JSON.stringify(plan)], (err) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
         res.json({ msg: "Preset Salvo" });
     });
 });
@@ -133,7 +154,10 @@ app.put('/api/presets/:id', verifyToken, (req, res) => {
 
         db.query('UPDATE saved_plans SET name = ?, data = ? WHERE user_id = ? AND front_id = ?', 
             [name, JSON.stringify(planData), req.userId, req.params.id], (err) => {
-            if (err) return res.status(500).send(err);
+            if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
             res.json({ msg: "Renomeado com sucesso" });
         });
     });
@@ -141,7 +165,10 @@ app.put('/api/presets/:id', verifyToken, (req, res) => {
 
 app.delete('/api/presets/:id', verifyToken, (req, res) => {
     db.query('DELETE FROM saved_plans WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err) => {
-        if (err) return res.status(500).send(err);
+        if (err) {
+    console.error("Erro SQL:", err); // Fica só no servidor
+    return res.status(500).json({ msg: "Erro interno no servidor. Tente novamente." });
+}
         res.json({ msg: "Preset Deletado" });
     });
 });

@@ -9,6 +9,42 @@ const AUTH_URL = IS_DEV
 
 console.log(`🔌 Conectando API em: ${API_BASE}`);
 
+/* ============================================================
+   SISTEMA DE NOTIFICAÇÃO (Substitui o Alert)
+   ============================================================ */
+
+// 1. Função que cria o Toast bonito (Agora Centralizado)
+function notify(text, type = "success") {
+    // Define cores: Verde para sucesso, Vermelho para erro
+    const bg = type === "error" ? "#ef4444" : "#22c55e"; 
+    
+    Toastify({
+        text: text,
+        duration: 3000,       
+        gravity: "top",       // Aparece no topo
+        position: "center",   // <--- MUDANÇA AQUI: Centraliza horizontalmente
+        style: { 
+            background: bg,
+            borderRadius: "8px",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+            fontWeight: "bold",
+            minWidth: "250px",    // Opcional: Garante um tamanho mínimo legal
+            textAlign: "center"   // Opcional: Centraliza o texto dentro do balão
+        },
+        stopOnFocus: true     
+    }).showToast();
+}
+
+// 2. O TRUQUE: Sobrescreve o window.alert nativo
+window.alert = function(msg) {
+    // Se a mensagem contiver "erro", usa o estilo vermelho, senão verde
+    const isError = msg && msg.toLowerCase().includes("erro");
+    notify(msg, isError ? "error" : "success");
+    
+    // Opcional: Loga no console também para você não perder o rastro
+    console.log(`[Alert System]: ${msg}`);
+};
+
 // --- LISTA DE ÍCONES (Adicionado para corrigir o bug do select vazio) ---
 const ICON_OPTIONS = [
     { val: 'fa-utensils', label: 'Geral' },
@@ -45,6 +81,33 @@ let pickerContext = null;
 let currentImportType = "";
 let currentPreviewId = null;
 let selectedRecipes = new Set(); 
+
+/* ============================================================
+   SISTEMA DE CONFIRMAÇÃO (CUSTOM CONFIRM)
+   ============================================================ */
+let confirmResolver = null;
+
+function showConfirm(text) {
+    const modal = document.getElementById('confirm-modal');
+    const msg = document.getElementById('confirm-msg');
+    
+    if(msg) msg.innerText = text || "Essa ação não pode ser desfeita.";
+    if(modal) modal.classList.remove('hidden');
+
+    return new Promise((resolve) => {
+        confirmResolver = resolve;
+    });
+}
+
+function resolveConfirm(result) {
+    const modal = document.getElementById('confirm-modal');
+    if(modal) modal.classList.add('hidden');
+    
+    if (confirmResolver) {
+        confirmResolver(result);
+        confirmResolver = null;
+    }
+}
 
 // --- TEMPLATES ---
 const TEMPLATE_PLAN = `Atue como um Nutricionista Sênior. Gere um JSON válido com um plano mensal (4 semanas). SEU PERFIL: [PERFIL]. REGRAS: "ingredients" usa "q_daily" em 'g' ou 'ml'. JSON: { "library": [{ "id": "rec_01", "name": "Nome", "cat": "almoco", "icon": "fa-drumstick-bite", "ingredients": [{"n": "Item", "q_daily": 200, "u": "g", "cat": "carnes"}], "steps": ["Passo"] }], "planner": { "1": { "almoco": "rec_01" } }, "themes": { "1": "Tema" } }`;
@@ -143,16 +206,30 @@ async function loadPresets() {
 function renderLibrary() {
   const g = document.getElementById("recipe-grid");
   g.innerHTML = "";
-  if (library.length === 0) {
+
+  // 1. Pega o termo digitado na busca (se existir o input)
+  const searchInput = document.getElementById("library-search");
+  const term = searchInput ? searchInput.value.toLowerCase() : "";
+
+  // 2. Filtra a biblioteca (Nome ou Categoria)
+  const filtered = library.filter((r) => 
+    r.name.toLowerCase().includes(term) || 
+    r.cat.toLowerCase().includes(term)
+  );
+
+  // 3. Verifica se tem resultados
+  if (filtered.length === 0) {
     document.getElementById("empty-library").classList.remove("hidden");
+    // Dica: Se quiser, poderia mudar o texto do "empty-library" aqui para dizer "Nenhum resultado para a busca"
     return;
   }
   document.getElementById("empty-library").classList.add("hidden");
 
-  library.forEach((r) => {
+  // 4. Renderiza apenas os filtrados
+  filtered.forEach((r) => {
     const isSelected = selectedRecipes.has(r.id);
     
-    // Div principal agora tem onclick para abrir o modal
+    // Div principal com onclick para abrir o modal
     const cardHtml = `
         <div class="bg-white border ${
           isSelected
@@ -387,18 +464,32 @@ async function saveRecipeToLibrary() {
   renderPlanner();
 }
 
+// Procure por: async function deleteRecipe(id, e) { ... }
+// E substitua por esta nova:
 async function deleteRecipe(id, e) {
-  e.stopPropagation();
-  if (confirm("Excluir receita permanentemente?")) {
-    await fetch(`${API_BASE}/library/${id}`, { method: "DELETE", headers });
-    library = library.filter((x) => x.id !== id);
-    renderLibrary();
-    renderPlanner();
-    if (selectedRecipes.has(id)) {
-      selectedRecipes.delete(id);
-      updateExportButton();
+    if(e) e.stopPropagation(); 
+    
+    const confirmed = await showConfirm("Você realmente quer excluir esta receita?");
+    
+    if (confirmed) {
+        try {
+            await fetch(`${API_BASE}/library/${id}`, { method: "DELETE", headers });
+            
+            library = library.filter((x) => x.id !== id);
+            
+            if (selectedRecipes.has(id)) {
+                selectedRecipes.delete(id);
+                updateExportButton();
+            }
+
+            renderLibrary();
+            renderPlanner();
+            notify("Receita excluída!", "success"); // Se tiver a notificação
+        } catch (error) {
+            console.error(error);
+            notify("Erro ao excluir receita.", "error");
+        }
     }
-  }
 }
 
 async function syncPlanner() {
@@ -449,14 +540,23 @@ async function saveCurrentAsPreset() {
   renderPresets();
 }
 
+// Procure por: async function deletePreset(id) { ... }
+// E substitua por esta nova:
 async function deletePreset(id) {
-  if (confirm("Excluir plano?")) {
-    await fetch(`${API_BASE}/presets/${id}`, { method: "DELETE", headers });
-    savedPlans = savedPlans.filter((x) => x.id !== id);
-    renderPresets();
-  }
+    const confirmed = await showConfirm("Deseja apagar este plano salvo?");
+    
+    if (confirmed) {
+        try {
+            await fetch(`${API_BASE}/presets/${id}`, { method: "DELETE", headers });
+            savedPlans = savedPlans.filter((x) => x.id !== id);
+            renderPresets();
+            notify("Plano excluído!", "success");
+        } catch (error) {
+            console.error(error);
+            notify("Erro ao excluir plano.", "error");
+        }
+    }
 }
-
 // --- UI & HELPERS ---
 
 function formatDisplay(q, u) {
@@ -934,4 +1034,16 @@ function addStepLine() {
       "beforeend",
       `<div class="flex gap-2 mb-2"><textarea class="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm h-12 s-txt" placeholder="Passo..."></textarea><button onclick="this.parentElement.remove()" class="text-red-400"><i class="fa-solid fa-trash"></i></button></div>`
     );
+}
+// Adicione no topo ou fim do admin.js
+function notify(text, type = "success") {
+    const bg = type === "success" ? "#22c55e" : "#ef4444"; // Verde ou Vermelho
+    Toastify({
+        text: text,
+        duration: 3000,
+        gravity: "top", // top or bottom
+        position: "right", // left, center or right
+        style: { background: bg, borderRadius: "8px", fontWeight: "bold", fontSize: "14px" },
+        stopOnFocus: true
+    }).showToast();
 }
