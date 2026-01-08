@@ -95,6 +95,36 @@ if (!token) window.location.href = "login.html";
 // ... verificações de token existentes ...
 const user = JSON.parse(localStorage.getItem('user')) || {};
 
+//?
+if (!token) window.location.href = 'login.html';
+
+// --- INJEÇÃO DO BOTÃO DE DONO ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Verifica se é dono
+    if (user.is_owner === 1) {
+        console.log("Usuário é DONO. Injetando botão..."); // Log para debug
+        
+        const nav = document.querySelector('aside nav');
+        if (nav) {
+            const ownerBtn = document.createElement('a');
+            ownerBtn.href = 'owner.html';
+            // Estilo vermelho chamativo
+            ownerBtn.className = "flex items-center w-full px-4 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors mb-4 shadow-lg shadow-red-200 animate-pulse";
+            ownerBtn.innerHTML = '<i class="fa-solid fa-user-shield w-5"></i> Painel do Dono';
+            
+            // Coloca no topo do menu
+            nav.prepend(ownerBtn);
+        } else {
+            console.error("Erro: Menu de navegação não encontrado.");
+        }
+    } else {
+        console.log("Usuário NÃO é dono ou is_owner é: ", user.is_owner);
+    }
+});
+
+//?
+
+
 window.onload = function() {
     // --- LÓGICA DO BOTÃO DE DONO ---
     if (user.is_owner === 1) {

@@ -1,6 +1,5 @@
 // --- CONFIGURAÇÃO ---
 const IS_DEV = window.location.port === "8080" || window.location.port === "5500"; 
-// Ajuste para pegar a porta correta do backend (3000)
 const API_BASE = "http://localhost:3000/api"; 
 const AUTH_URL = "http://localhost:3000/auth";
 
@@ -20,8 +19,6 @@ let myPresets = [];
 window.onload = async function() {
     await loadPosts();
     checkDeepLink();
-    
-    // Carrega dados do usuário para o modal de anexo em segundo plano
     fetchUserLibrary(); 
 }
 
@@ -64,10 +61,7 @@ function renderFeed(posts) {
     posts.forEach(p => {
         const isMyPost = p.user_id === user.id;
         const ytId = extractYoutubeId(p.youtube_link);
-        const userVote = p.my_vote; // 'like', 'dislike' ou null
-
-        // Cálculo da "temperatura" (Saldo de Likes)
-        const score = (p.likes_count || 0) - (p.dislikes_count || 0);
+        const userVote = p.my_vote;
 
         let html = `
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in relative group" id="post-${p.id}">
@@ -96,14 +90,14 @@ function renderFeed(posts) {
             </div>
 
             ${ytId ? `
-            <div class="w-full h-56 md:h-72 bg-black relative group/video cursor-pointer overflow-hidden rounded-lg mt-2 mx-4 mb-4 shadow-sm max-w-[calc(100%-2rem)]" onclick="playVideo(this, '${ytId}')">
-                <img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="w-full h-full object-cover opacity-90 group-hover/video:opacity-75 transition-opacity">
+            <div class="w-full aspect-video bg-black relative group/video cursor-pointer overflow-hidden mt-2" onclick="playVideo(this, '${ytId}')">
+                <img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="w-full h-full object-cover opacity-90 group-hover/video:opacity-80 transition-opacity">
                 <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="w-16 h-16 bg-red-600/90 rounded-full flex items-center justify-center text-white shadow-xl group-hover/video:scale-110 transition-transform backdrop-blur-sm">
+                    <div class="w-16 h-16 bg-red-600/90 rounded-full flex items-center justify-center text-white shadow-xl group-hover/video:scale-110 transition-transform backdrop-blur-sm pointer-events-none">
                         <i class="fa-solid fa-play text-2xl ml-1"></i>
                     </div>
                 </div>
-                <div class="absolute bottom-3 right-3 bg-black/70 text-white text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider">
+                <div class="absolute bottom-3 right-3 bg-black/70 text-white text-[10px] px-2 py-1 rounded font-bold uppercase tracking-wider pointer-events-none">
                     Toque para assistir
                 </div>
             </div>` : ''}
@@ -122,11 +116,11 @@ function renderFeed(posts) {
 
                 <div class="flex gap-2">
                     <button onclick="sharePost(${p.id})" class="px-3 py-2 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100">
-                        <i class="fa-solid fa-share-nodes mr-1"></i> Compartilhar
+                        <i class="fa-solid fa-share-nodes mr-1"></i>
                     </button>
                     
                     <button onclick='importContent(${JSON.stringify(p.content_json).replace(/'/g, "&#39;")})' class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-900 shadow-md flex items-center gap-2">
-                        <i class="fa-solid fa-download"></i> Importar
+                        <i class="fa-solid fa-download"></i> <span class="hidden md:inline">Importar</span>
                     </button>
                 </div>
 
@@ -164,7 +158,6 @@ async function createPost() {
 
         if (res.ok) {
             notify("Publicado com sucesso!");
-            // Limpar form
             document.getElementById('post-title').value = "";
             document.getElementById('post-desc').value = "";
             document.getElementById('post-yt').value = "";
@@ -172,7 +165,7 @@ async function createPost() {
             document.getElementById('attach-label').innerText = "Anexar";
             document.getElementById('btn-attach').className = "flex-1 px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 border border-slate-200 flex items-center justify-center gap-2 whitespace-nowrap transition-colors";
             
-            loadPosts(); // Recarrega feed
+            loadPosts(); 
         } else {
             notify(data.msg || "Erro ao postar.", "error");
         }
@@ -207,51 +200,30 @@ async function deletePost(id) {
     } catch (e) { notify("Erro de conexão.", "error"); }
 }
 
-// --- IMPORTAÇÃO MÁGICA ---
-
 async function importContent(content) {
     if (!confirm("Deseja importar este conteúdo para sua biblioteca pessoal?")) return;
-
-    // Detecta se é Lista de Receitas ou Plano Único
-    const isPlan = content.data && content.planner; // Estrutura de Preset
-    const isRecipeList = Array.isArray(content) || (content.id && content.ingredients);
-
+    const isPlan = content.data && content.planner;
     try {
         if (isPlan) {
-            // Salva como Preset
             const newPlan = { ...content, id: "plan_imp_" + Date.now(), name: content.name + " (Comunidade)" };
-            await fetch(`${API_BASE}/presets`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(newPlan)
-            });
+            await fetch(`${API_BASE}/presets`, { method: 'POST', headers, body: JSON.stringify(newPlan) });
             notify("Plano importado! Vá em 'Configurações > Meus Planos' para usar.");
         } else {
-            // Salva Receitas na Library
             const list = Array.isArray(content) ? content : [content];
             let count = 0;
             for (let r of list) {
-                // Sanitiza para evitar duplicidade de ID
                 const newRecipe = { ...r, id: "rec_imp_" + Date.now() + Math.random() };
-                await fetch(`${API_BASE}/library`, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(newRecipe)
-                });
+                await fetch(`${API_BASE}/library`, { method: 'POST', headers, body: JSON.stringify(newRecipe) });
                 count++;
             }
-            notify(`${count} receita(s) importada(s) para sua Biblioteca!`);
+            notify(`${count} receita(s) importada(s)!`);
         }
-    } catch (e) {
-        notify("Erro ao importar: " + e.message, "error");
-    }
+    } catch (e) { notify("Erro ao importar.", "error"); }
 }
 
-// --- COMPARTILHAMENTO ---
 function sharePost(id) {
     const url = `${window.location.origin}/community.html?post_id=${id}`;
     const text = `Veja essa postagem incrível no Diet & Ride!`;
-    
     if (navigator.share) {
         navigator.share({ title: 'Diet & Ride', text: text, url: url }).catch(() => copyToClip(url));
     } else {
@@ -260,10 +232,9 @@ function sharePost(id) {
 }
 
 function copyToClip(text) {
-    navigator.clipboard.writeText(text).then(() => notify("Link copiado para a área de transferência!"));
+    navigator.clipboard.writeText(text).then(() => notify("Link copiado!"));
 }
 
-// --- SISTEMA DE ANEXO ---
 async function fetchUserLibrary() {
     try {
         const [resLib, resPresets] = await Promise.all([
@@ -272,7 +243,7 @@ async function fetchUserLibrary() {
         ]);
         if (resLib.ok) myLibrary = await resLib.json();
         if (resPresets.ok) myPresets = await resPresets.json();
-    } catch(e) { console.error("Erro carregando biblioteca user", e); }
+    } catch(e) { console.error(e); }
 }
 
 function openAttachModal() {
@@ -287,13 +258,11 @@ function loadAttachList(type) {
     const list = document.getElementById('attach-list');
     const btnRec = document.getElementById('tab-recipe');
     const btnPlan = document.getElementById('tab-plan');
-    
     list.innerHTML = "";
 
     if (type === 'recipe') {
         btnRec.className = "flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700";
         btnPlan.className = "flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500";
-        
         myLibrary.forEach(r => {
             const el = document.createElement('div');
             el.className = "p-3 hover:bg-slate-50 border-b border-slate-50 cursor-pointer flex items-center gap-3";
@@ -304,7 +273,6 @@ function loadAttachList(type) {
     } else {
         btnPlan.className = "flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700";
         btnRec.className = "flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500";
-
         myPresets.forEach(p => {
             const el = document.createElement('div');
             el.className = "p-3 hover:bg-slate-50 border-b border-slate-50 cursor-pointer flex items-center gap-3";
@@ -318,12 +286,10 @@ function loadAttachList(type) {
 function selectAttachment(obj, label) {
     document.getElementById('post-json-content').value = JSON.stringify(obj);
     document.getElementById('attach-label').innerText = label;
-    // Estilo "Selecionado"
     document.getElementById('btn-attach').className = "flex-1 px-4 py-2 bg-green-50 text-green-700 border border-green-200 text-xs font-bold rounded-lg flex items-center justify-center gap-2 whitespace-nowrap transition-colors";
     closeAttachModal();
 }
 
-// --- DENÚNCIA ---
 function openReportModal(id) {
     document.getElementById('report-post-id').value = id;
     document.getElementById('report-modal').classList.remove('hidden');
@@ -336,25 +302,16 @@ async function submitReport() {
     const id = document.getElementById('report-post-id').value;
     const reason = document.getElementById('report-reason').value;
     if(!reason) return notify("Descreva o motivo.", "error");
-
     try {
-        await fetch(`${API_BASE}/community/report`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ post_id: id, reason })
-        });
-        notify("Denúncia enviada. Obrigado!");
+        await fetch(`${API_BASE}/community/report`, { method: 'POST', headers, body: JSON.stringify({ post_id: id, reason }) });
+        notify("Denúncia enviada.");
         closeReportModal();
     } catch(e) { notify("Erro ao enviar.", "error"); }
 }
 
-// --- UTILS ---
 function notify(text, type = "success") {
     Toastify({
-        text: text,
-        duration: 3000,
-        gravity: "top",
-        position: "center",
+        text: text, duration: 3000, gravity: "top", position: "center",
         style: { background: type === "error" ? "#ef4444" : "#22c55e", borderRadius: "8px" }
     }).showToast();
 }
@@ -381,18 +338,18 @@ function checkDeepLink() {
     }
 }
 
-// --- PLAYER DE VÍDEO (FACADE) ---
+// --- PLAYER OTIMIZADO (SEM BUGS) ---
 function playVideo(container, videoId) {
-    // Substitui a imagem pelo Iframe com Autoplay
+    // 1. Remove qualquer evento de clique para evitar duplo disparo
+    container.onclick = null;
+    container.classList.remove('cursor-pointer', 'group/video');
+    
+    // 2. Substitui com parâmetros de autplay e interface limpa
     container.innerHTML = `
-        <iframe width="100%" height="100%" 
-            src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
+        <iframe class="w-full h-full" 
+            src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1" 
             title="YouTube video player" frameborder="0" 
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
             allowfullscreen>
         </iframe>`;
-    
-    // Remove interatividade do container para não recarregar
-    container.classList.remove('cursor-pointer', 'group/video');
-    container.onclick = null;
 }

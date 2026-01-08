@@ -2,187 +2,220 @@ const API_BASE = "http://localhost:3000/api";
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user')) || {};
 
-// Segurança básica de Frontend (A API faz a real)
+// Segurança
 if (!token || user.is_owner !== 1) {
-    alert("ACESSO NEGADO: Esta área é restrita ao Dono do Sistema.");
     window.location.href = 'app.html';
 }
 
 window.onload = function() {
-    loadReports();
+    loadStats();
+    // Default view
+    switchView('dashboard');
 }
 
-function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = 'login.html';
+function switchView(viewName) {
+    // Esconde todas as views
+    ['dashboard', 'users', 'posts', 'reports'].forEach(v => {
+        document.getElementById(`view-${v}`).classList.add('hidden');
+        const btn = document.getElementById(`nav-${v}`);
+        if(btn) btn.className = "flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg mb-1 transition-colors";
+    });
+
+    // Mostra a atual
+    document.getElementById(`view-${viewName}`).classList.remove('hidden');
+    
+    // Destaca botão no menu
+    const activeBtn = document.getElementById(`nav-${viewName}`);
+    if(activeBtn) activeBtn.className = "flex items-center w-full px-4 py-3 text-sm font-bold bg-slate-50 text-indigo-700 rounded-lg mb-1 transition-colors border border-indigo-100";
+
+    // Carrega dados da view
+    if (viewName === 'users') loadUsers();
+    if (viewName === 'posts') loadAllPosts();
+    if (viewName === 'reports') loadReports();
+    if (viewName === 'dashboard') loadStats();
 }
 
-// --- GERENCIAMENTO DE USUÁRIOS ---
-
-let currentTargetEmail = "";
-let currentTargetStatus = 1; // 1 = Pode postar, 0 = Banido
-
-async function checkUserStatus() {
-    const email = document.getElementById('ban-email').value.trim();
-    if(!email) return notify("Digite um email.", "error");
-
-    // Truque: Usamos a rota de ban para ler o status se passarmos o mesmo status atual
-    // Mas para simplificar, vamos tentar banir e desbanir ou criar uma rota de "check".
-    // Como não criamos rota de "check user", vamos inferir pelo erro ou sucesso na tentativa.
-    // Melhor abordagem com o que temos: Tentar definir status e ver msg.
-    // VAMOS ADICIONAR UMA PEQUENA MELHORIA NO FRONT:
-    // O ideal seria ter uma rota GET /user/:email, mas para não mexer no backend agora,
-    // vamos assumir que queremos BANIR se clicarmos.
-    
-    // Na verdade, vou implementar uma lógica visual simples:
-    document.getElementById('target-email').innerText = email;
-    document.getElementById('user-status-area').classList.remove('hidden');
-    document.getElementById('status-display').innerHTML = `<span class="text-slate-400 text-sm">Escolha a ação:</span>`;
-    
-    const btn = document.getElementById('btn-toggle-ban');
-    // Reinicia estado visual neutro
-    btn.innerText = "Alternar Permissão (Banir/Desbanir)";
-    btn.className = "w-full py-2 rounded-lg font-bold text-sm transition-colors shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white";
-    btn.onclick = () => toggleBanAction(email);
+// --- ESTATÍSTICAS ---
+async function loadStats() {
+    try {
+        const res = await fetch(`${API_BASE}/owner/stats`, { headers: { "Authorization": `Bearer ${token}` } });
+        const data = await res.json();
+        document.getElementById('stat-users').innerText = data.users;
+        document.getElementById('stat-posts').innerText = data.posts;
+        document.getElementById('stat-reports').innerText = data.reports;
+        
+        // Atualiza badge
+        const badge = document.getElementById('badge-reports');
+        if(data.reports > 0) {
+            badge.innerText = data.reports;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    } catch(e) { console.error(e); }
 }
 
-async function toggleBanAction(email) {
-    // Como não sabemos o status atual sem consultar o banco, vamos perguntar qual ação deseja
-    // Mas para ser "Prático e Direto" como você pediu, vamos tentar BANIR (0).
-    // Se a API disser que atualizou, ok.
-    
-    const wantBan = confirm(`Deseja BANIR este usuário (${email}) de postar na comunidade?\n\nOK = BANIR (Proibir)\nCancelar = LIBERAR (Permitir)`);
-    const newStatus = wantBan ? 0 : 1;
+// --- USUÁRIOS ---
+async function loadUsers() {
+    const tbody = document.getElementById('table-users-body');
+    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-slate-400">Carregando...</td></tr>';
 
     try {
-        const res = await fetch(`${API_BASE}/owner/ban`, {
+        const res = await fetch(`${API_BASE}/owner/users`, { headers: { "Authorization": `Bearer ${token}` } });
+        const users = await res.json();
+        
+        tbody.innerHTML = "";
+        users.forEach(u => {
+            const isBan = u.can_post === 0;
+            const statusHtml = isBan 
+                ? `<span class="bg-red-100 text-red-600 py-1 px-2 rounded text-xs font-bold">Banido</span>` 
+                : `<span class="bg-green-100 text-green-600 py-1 px-2 rounded text-xs font-bold">Ativo</span>`;
+            
+            const btnHtml = isBan
+                ? `<button onclick="toggleBan('${u.email}', 1)" class="text-xs font-bold text-green-600 hover:bg-green-50 px-2 py-1 rounded border border-green-200">Desbanir</button>`
+                : `<button onclick="toggleBan('${u.email}', 0)" class="text-xs font-bold text-red-600 hover:bg-red-50 px-2 py-1 rounded border border-red-200">Banir</button>`;
+
+            const row = `
+                <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                    <td class="px-6 py-4 text-slate-500 font-mono text-xs">#${u.id}</td>
+                    <td class="px-6 py-4 font-bold text-slate-700">${u.name}</td>
+                    <td class="px-6 py-4 text-slate-500">${u.email}</td>
+                    <td class="px-6 py-4">${statusHtml}</td>
+                    <td class="px-6 py-4 text-right">${btnHtml}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    } catch(e) { notify("Erro ao carregar usuários", "error"); }
+}
+
+async function toggleBan(email, status) {
+    if(!confirm(`Deseja alterar o status de ${email}?`)) return;
+    try {
+        await fetch(`${API_BASE}/owner/ban`, {
             method: 'POST',
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify({ email, can_post: newStatus })
+            body: JSON.stringify({ email, can_post: status })
         });
-        const data = await res.json();
-
-        if (res.ok) {
-            notify(data.msg);
-            document.getElementById('status-display').innerHTML = newStatus === 0 
-                ? '<span class="text-red-500"><i class="fa-solid fa-ban"></i> ESTÁ BANIDO</span>'
-                : '<span class="text-green-500"><i class="fa-solid fa-check"></i> ESTÁ LIBERADO</span>';
-        } else {
-            notify(data.msg, "error");
-        }
-    } catch(e) { notify("Erro de conexão", "error"); }
+        notify("Status atualizado!");
+        loadUsers(); // Recarrega tabela
+    } catch(e) { notify("Erro ao atualizar", "error"); }
 }
 
+// --- POSTS ---
+async function loadAllPosts() {
+    const tbody = document.getElementById('table-posts-body');
+    tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-slate-400">Carregando...</td></tr>';
+    
+    try {
+        const res = await fetch(`${API_BASE}/owner/all_posts`, { headers: { "Authorization": `Bearer ${token}` } });
+        const posts = await res.json();
+        
+        tbody.innerHTML = "";
+        posts.forEach(p => {
+            const row = `
+                <tr class="hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                    <td class="px-6 py-4">
+                        <p class="font-bold text-slate-700 truncate max-w-xs">${p.title}</p>
+                        <p class="text-xs text-slate-400 truncate max-w-xs">${p.description}</p>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600">
+                        ${p.author_name}<br><span class="text-xs text-slate-400">${p.author_email}</span>
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-500">${new Date(p.created_at).toLocaleDateString()}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="deletePost(${p.id}, true)" class="text-slate-400 hover:text-red-600 transition-colors"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    } catch(e) { notify("Erro ao carregar posts", "error"); }
+}
+
+async function deletePost(id, reloadList = false) {
+    if(!confirm("Apagar post permanentemente?")) return;
+    try {
+        await fetch(`${API_BASE}/community/post/${id}`, { method: 'DELETE', headers: { "Authorization": `Bearer ${token}` } });
+        notify("Post deletado.");
+        if(reloadList) loadAllPosts();
+        closePreview();
+        loadReports(); // Atualiza reports se houver
+        loadStats();
+    } catch(e) { notify("Erro ao deletar", "error"); }
+}
 
 // --- DENÚNCIAS ---
-
 async function loadReports() {
-    const list = document.getElementById('reports-list');
+    const grid = document.getElementById('reports-grid');
+    const empty = document.getElementById('reports-empty');
+    grid.innerHTML = "";
+    
     try {
-        const res = await fetch(`${API_BASE}/owner/reports`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        
-        if (!res.ok) throw new Error("Sem permissão ou erro");
+        const res = await fetch(`${API_BASE}/owner/reports`, { headers: { "Authorization": `Bearer ${token}` } });
         const reports = await res.json();
-
-        list.innerHTML = "";
+        
         if(reports.length === 0) {
-            list.innerHTML = `<div class="text-center py-10 text-slate-600">Nenhuma denúncia pendente. <i class="fa-solid fa-check text-green-500 ml-2"></i></div>`;
+            empty.classList.remove('hidden');
             return;
         }
+        empty.classList.add('hidden');
 
         reports.forEach(r => {
-            const el = document.createElement('div');
-            el.className = "bg-slate-900 border border-slate-700 rounded-lg p-4 fade-in";
-            el.innerHTML = `
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-bold text-red-400 bg-red-400/10 px-2 py-1 rounded border border-red-400/20">Denúncia #${r.id}</span>
-                    <span class="text-xs text-slate-500">${new Date(r.created_at).toLocaleDateString()}</span>
+            const card = document.createElement('div');
+            card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col";
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <span class="bg-red-50 text-red-600 text-xs font-bold px-2 py-1 rounded border border-red-100">Denúncia #${r.id}</span>
+                    <span class="text-xs text-slate-400">${new Date(r.created_at).toLocaleDateString()}</span>
                 </div>
-                <p class="text-sm text-slate-300 mb-2"><strong class="text-white">Motivo:</strong> ${r.reason}</p>
-                <div class="bg-slate-800 p-2 rounded border border-slate-700 mb-3">
-                    <p class="text-xs text-slate-400 uppercase font-bold mb-1">Post Denunciado:</p>
-                    <p class="text-sm font-bold text-white truncate">${r.post_title}</p>
-                </div>
-                <div class="flex gap-2 justify-end">
-                    <button onclick="showPostPreview(${r.post_id})" class="px-3 py-1.5 text-xs font-bold bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors">Ver Post</button>
-                    <button onclick="ignoreReport(${r.id})" class="px-3 py-1.5 text-xs font-bold bg-yellow-600 hover:bg-yellow-700 text-white rounded transition-colors">Ignorar (Manter)</button>
-                    <button onclick="deletePostAndResolve(${r.post_id})" class="px-3 py-1.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded transition-colors">Apagar Post</button>
+                <p class="text-sm text-slate-600 mb-1 font-bold">Motivo:</p>
+                <p class="text-sm text-slate-800 bg-slate-50 p-2 rounded mb-4 border border-slate-100">${r.reason}</p>
+                
+                <div class="mt-auto flex gap-2">
+                    <button onclick="previewReportedPost(${r.post_id})" class="flex-1 py-2 text-xs font-bold bg-indigo-50 text-indigo-700 rounded hover:bg-indigo-100 transition-colors">Ver Post & Ações</button>
                 </div>
             `;
-            list.appendChild(el);
+            grid.appendChild(card);
         });
-
-    } catch(e) {
-        list.innerHTML = `<div class="text-center py-10 text-red-500">Erro ao carregar denúncias. Você é Admin?</div>`;
-    }
+    } catch(e) { notify("Erro ao carregar denúncias", "error"); }
 }
 
-// Visualizar Post antes de apagar
-async function showPostPreview(postId) {
+async function previewReportedPost(postId) {
     try {
-        const res = await fetch(`${API_BASE}/community/post/${postId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if(res.ok) {
-            const post = await res.json();
-            document.getElementById('prev-title').innerText = post.title;
-            document.getElementById('prev-desc').innerText = post.description;
-            const yt = document.getElementById('prev-yt');
-            const ytC = document.getElementById('prev-yt-container');
-            if(post.youtube_link) {
-                ytC.classList.remove('hidden');
-                yt.href = post.youtube_link;
-                yt.innerText = post.youtube_link;
-            } else {
-                ytC.classList.add('hidden');
-            }
-            document.getElementById('preview-modal').classList.remove('hidden');
+        const res = await fetch(`${API_BASE}/community/post/${postId}`, { headers: { "Authorization": `Bearer ${token}` } });
+        if(!res.ok) throw new Error("Post não encontrado (talvez já deletado)");
+        const p = await res.json();
+
+        document.getElementById('prev-title').innerText = p.title;
+        document.getElementById('prev-desc').innerText = p.description;
+        document.getElementById('prev-json').innerText = JSON.stringify(p.content_json, null, 2);
+        
+        const ytBox = document.getElementById('prev-yt-box');
+        if(p.youtube_link) {
+            ytBox.classList.remove('hidden');
+            const ytId = p.youtube_link.split('v=')[1] || p.youtube_link.split('/').pop();
+            document.getElementById('prev-iframe').src = `https://www.youtube.com/embed/${ytId}`;
+        } else {
+            ytBox.classList.add('hidden');
         }
-    } catch(e) { notify("Erro ao buscar post", "error"); }
-}
-function closePreview() { document.getElementById('preview-modal').classList.add('hidden'); }
 
-// Ações nas Denúncias
-async function deletePostAndResolve(postId) {
-    if(!confirm("Tem certeza? Isso apagará o post PERMANENTEMENTE.")) return;
-    
-    // Ao deletar o post, o banco (Cascade) já deve limpar as denúncias,
-    // mas se quisermos ser explícitos, chamamos o delete do post na API
-    try {
-        const res = await fetch(`${API_BASE}/community/post/${postId}`, {
-            method: 'DELETE',
-            headers: { "Authorization": `Bearer ${token}` }
-        });
-        if(res.ok) {
-            notify("Post excluído e denúncia resolvida.");
-            loadReports();
-        } else { notify("Erro ao excluir", "error"); }
-    } catch(e) { notify("Erro conexão", "error"); }
+        // Configura botão de deletar do modal
+        const btnDel = document.getElementById('btn-delete-post');
+        btnDel.onclick = () => deletePost(p.id);
+
+        document.getElementById('preview-modal').classList.remove('hidden');
+    } catch(e) { notify(e.message, "error"); }
 }
 
-async function ignoreReport(reportId) {
-    // "Ignorar" seria marcar como resolvido sem apagar o post, ou deletar a denúncia.
-    // Como não criamos rota específica para "deletar denúncia", 
-    // e o banco tem status 'resolved', o ideal seria atualizar.
-    // Porem, no backend fornecido não criei rota PUT /report/:id.
-    // SOLUÇÃO PRÁTICA: Vamos deixar assim por enquanto ou você pode rodar um comando SQL no banco
-    // Mas para o frontend não quebrar, vou apenas remover da tela visualmente e avisar.
-    
-    // (Se quiser implementar no futuro, crie a rota DELETE /api/community/report/:id)
-    notify("Funcionalidade de 'Ignorar' requer atualização no backend. O post será mantido.");
-    // Visualmente remove
-    loadReports(); 
+function closePreview() {
+    document.getElementById('preview-modal').classList.add('hidden');
+    document.getElementById('prev-iframe').src = ""; // Para o vídeo
 }
 
 function notify(text, type = "success") {
     Toastify({
-        text: text,
-        duration: 3000,
-        gravity: "top",
-        position: "center",
+        text: text, duration: 3000, gravity: "top", position: "center",
         style: { background: type === "error" ? "#ef4444" : "#22c55e", borderRadius: "8px" }
     }).showToast();
 }

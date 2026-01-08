@@ -323,4 +323,53 @@ app.post('/api/owner/ban', verifyToken, verifyOwner, (req, res) => {
     });
 });
 
+// --- NOVO: ROTAS PARA O PAINEL TUNADO ---
+
+// 1. Estatísticas Gerais (Dashboard)
+app.get('/api/owner/stats', verifyToken, verifyOwner, (req, res) => {
+    const stats = {};
+    
+    // Executa queries em paralelo
+    const qUsers = new Promise((resolve, reject) => {
+        db.query('SELECT COUNT(*) as total FROM users', (err, res) => err ? reject(err) : resolve(res[0].total));
+    });
+    const qPosts = new Promise((resolve, reject) => {
+        db.query('SELECT COUNT(*) as total FROM community_posts', (err, res) => err ? reject(err) : resolve(res[0].total));
+    });
+    const qReports = new Promise((resolve, reject) => {
+        db.query('SELECT COUNT(*) as total FROM community_reports WHERE status = "pending"', (err, res) => err ? reject(err) : resolve(res[0].total));
+    });
+
+    Promise.all([qUsers, qPosts, qReports])
+        .then(([users, posts, reports]) => {
+            res.json({ users, posts, reports });
+        })
+        .catch(err => res.status(500).json({ msg: "Erro ao buscar stats" }));
+});
+
+// 2. Listar Todos os Usuários
+app.get('/api/owner/users', verifyToken, verifyOwner, (req, res) => {
+    // Traz todos os users (exceto senha)
+    db.query('SELECT id, name, email, can_post, created_at FROM users ORDER BY id DESC', (err, results) => {
+        if (err) return res.status(500).json({ msg: "Erro SQL" });
+        res.json(results);
+    });
+});
+
+// 3. Listar Todos os Posts (Gerenciamento)
+app.get('/api/owner/all_posts', verifyToken, verifyOwner, (req, res) => {
+    const sql = `
+        SELECT p.*, u.name as author_name, u.email as author_email,
+        (SELECT COUNT(*) FROM community_reports r WHERE r.post_id = p.id) as report_count
+        FROM community_posts p
+        JOIN users u ON p.user_id = u.id
+        ORDER BY p.created_at DESC
+        LIMIT 100
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ msg: "Erro SQL" });
+        res.json(results);
+    });
+});
+
 app.listen(3000, () => console.log('🚀 API Rodando na porta 3000'));
