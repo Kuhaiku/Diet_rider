@@ -14,10 +14,8 @@
     function init() {
         const stored = localStorage.getItem('dietData');
         weeksData = stored ? JSON.parse(stored) : defaultData;
-        document.getElementById('current-weight').value = localStorage.getItem('dietWeightCurrent') || 90;
-        document.getElementById('target-weight').value = localStorage.getItem('dietWeightTarget') || 75;
-        updateWeight();
-        setMode('week'); nav('diet', 1);
+        setMode('day'); 
+         nav('diet', 1);
     }
 
     function formatDisplay(q, u) {

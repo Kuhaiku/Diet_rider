@@ -21,6 +21,7 @@ services:
       - EMAIL_PASS=${EMAIL_PASS}
       - JWT_SECRET=${JWT_SECRET}
       - PORT=3000
+      - OWNER_EMAIL=${OWNER_EMAIL}
     networks:
       - diet-network
 

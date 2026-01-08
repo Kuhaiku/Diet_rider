@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Diet & Ride | App Protegido v37</title>
+    <title>Planner Diário | Diet & Ride</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <script>
-        // const API_URL = '/auth';
         const API_URL = 'http://localhost:3000/auth';
         const token = localStorage.getItem('token');
         if (!token) window.location.href = 'login.html';
@@ -53,6 +52,19 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-4 space-y-6">
+            
+            <div class="space-y-2">
+                <a href="community.html" class="flex items-center w-full px-4 py-4 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl shadow-lg shadow-indigo-200 hover:scale-[1.02] transition-transform">
+                    <i class="fa-solid fa-users w-6"></i> Comunidade
+                </a>
+                
+                <a href="admin.html" class="flex items-center w-full px-4 py-3 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200">
+                    <i class="fa-solid fa-gear w-6 text-slate-500"></i> Configurações
+                </a>
+            </div>
+
+            <div class="border-t border-slate-100 my-2"></div>
+
             <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
                 <label class="text-[10px] font-bold text-blue-400 uppercase block mb-2">VISUALIZAÇÃO</label>
                 <div class="flex bg-white p-1 rounded-lg border border-blue-100 shadow-sm">
@@ -69,33 +81,11 @@
                 <button onclick="nav('diet', 4)" id="nav-w4" class="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-50 transition-colors inactive-nav text-sm font-medium">Semana 4</button>
             </nav>
 
-            <div class="border-t border-slate-100 my-2"></div>
-
-            <button onclick="nav('market', 0)" id="nav-market" class="w-full text-left px-4 py-3 rounded-lg hover:bg-green-50 transition-colors inactive-nav text-sm font-medium group flex items-center justify-between text-slate-600">
+            <button onclick="nav('market', 0)" id="nav-market" class="w-full text-left px-4 py-3 rounded-lg hover:bg-green-50 transition-colors inactive-nav text-sm font-medium group flex items-center justify-between text-slate-600 mt-2">
                 <span><i class="fa-solid fa-basket-shopping mr-2 text-slate-400 group-hover:text-green-600"></i> Mercado</span>
             </button>
 
-            <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 mt-4">
-                <div class="flex justify-between items-center mb-3 text-sm">
-                    <div class="text-center w-1/2">
-                        <label class="block text-[10px] font-bold text-slate-400">ATUAL</label>
-                        <input type="number" id="current-weight" class="bg-transparent border-b border-dashed border-slate-300 w-full text-center font-bold text-slate-700 focus:outline-none focus:border-blue-500" onchange="updateWeight()">
-                    </div>
-                    <i class="fa-solid fa-arrow-right text-slate-300 text-xs mx-2"></i>
-                    <div class="text-center w-1/2">
-                        <label class="block text-[10px] font-bold text-slate-400">META</label>
-                        <input type="number" id="target-weight" class="bg-transparent border-b border-dashed border-slate-300 w-full text-center font-bold text-green-600 focus:outline-none focus:border-green-500" onchange="updateWeight()">
-                    </div>
-                </div>
-                <div class="w-full bg-slate-200 rounded-full h-1.5 mb-1 overflow-hidden">
-                    <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-1000" style="width: 0%"></div>
-                </div>
-            </div>
-
             <div class="mt-auto border-t border-slate-100 pt-4">
-                <a href="admin.html" class="flex items-center w-full px-4 py-3 text-xs font-bold text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors gap-2">
-                    <i class="fa-solid fa-user-gear"></i> Área Administrativa
-                </a>
                 <button onclick="logout()" class="flex items-center w-full px-4 py-3 mt-1 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors gap-2">
                     <i class="fa-solid fa-right-from-bracket"></i> Sair
                 </button>
@@ -109,7 +99,6 @@
     </div>
 
     <main class="flex-1 overflow-y-auto p-4 md:p-8 md:ml-72 transition-all duration-300 h-full">
-
         <div id="view-diet" class="max-w-5xl mx-auto fade-in pb-40">
             <div class="mb-4 md:mb-8">
                 <span class="text-blue-600 font-bold text-[10px] md:text-xs tracking-wider uppercase bg-blue-50 px-2 py-1 rounded inline-block mb-2" id="diet-subtitle">SEMANA 1</span>
@@ -183,4 +172,3 @@
 <script src="./js/app.js"></script>
 </body>
 </html>
-

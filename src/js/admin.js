@@ -92,6 +92,30 @@ const ICON_OPTIONS = [
 const token = localStorage.getItem("token");
 if (!token) window.location.href = "login.html";
 
+// ... verificações de token existentes ...
+const user = JSON.parse(localStorage.getItem('user')) || {};
+
+window.onload = function() {
+    // --- LÓGICA DO BOTÃO DE DONO ---
+    if (user.is_owner === 1) {
+        // Encontra o menu lateral
+        const nav = document.querySelector('aside nav');
+        
+        // Cria o botão especial
+        const ownerBtn = document.createElement('a');
+        ownerBtn.href = 'owner.html';
+        ownerBtn.className = "flex items-center w-full px-4 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors mb-4 shadow-lg shadow-red-200";
+        ownerBtn.innerHTML = '<i class="fa-solid fa-user-shield w-5"></i> Painel do Dono';
+        
+        // Insere no topo do menu
+        nav.prepend(ownerBtn);
+    }
+    
+    // ... restante do seu código (loadPresets, etc) ...
+    loadPresets(); 
+    // ...
+}
+
 const headers = {
   "Content-Type": "application/json",
   Authorization: `Bearer ${token}`,
