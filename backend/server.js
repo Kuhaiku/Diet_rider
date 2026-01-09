@@ -262,7 +262,7 @@ app.post('/api/community/vote', verifyToken, (req, res) => {
 });
 
 
-// 5. Excluir Post (O dono do post ou o perfil podem excluir)
+// 5. Excluir Post (O dono do post ou o ADMIN podem excluir)
 app.delete('/api/community/post/:id', verifyToken, (req, res) => {
     // Busca o post para saber quem é o dono dele
     db.query('SELECT user_id FROM community_posts WHERE id = ?', [req.params.id], (err, results) => {
@@ -302,7 +302,7 @@ app.post('/api/community/report', verifyToken, (req, res) => {
 });
 
 
-// --- PAINEL DO DONO (SUPER perfil) ---
+// --- PAINEL DO DONO (SUPER ADMIN) ---
 
 // Listar Denúncias
 app.get('/api/owner/reports', verifyToken, verifyOwner, (req, res) => {

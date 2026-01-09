@@ -8,8 +8,15 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <script>
+        const API_URL = 'http://localhost:3000/auth';
         const token = localStorage.getItem('token');
         if (!token) window.location.href = 'login.html';
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        }
     </script>
 
     <style>
@@ -51,12 +58,8 @@
                     <i class="fa-solid fa-users w-6"></i> Comunidade
                 </a>
                 
-                <a href="perfil.html" class="flex items-center w-full px-4 py-3 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200">
-                    <i class="fa-solid fa-user-circle w-6 text-slate-500"></i> Meu Perfil
-                </a>
-
-                <a href="owner.html" id="btn-owner" class="hidden flex items-center w-full px-4 py-3 text-sm font-bold text-slate-700 bg-yellow-50 hover:bg-yellow-100 rounded-xl transition-colors border border-yellow-200 mt-2">
-                    <i class="fa-solid fa-crown w-6 text-yellow-600"></i> Painel Dono
+                <a href="admin.html" class="flex items-center w-full px-4 py-3 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors border border-slate-200">
+                    <i class="fa-solid fa-gear w-6 text-slate-500"></i> Configurações
                 </a>
             </div>
 
