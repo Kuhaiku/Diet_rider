@@ -227,6 +227,27 @@ app.get('/api/community/posts', verifyToken, (req, res) => {
         res.json(results);
     });
 });
+// Rota de Busca de Usuários (Para o autocomplete/busca de perfil)
+app.get('/api/community/users', verifyToken, (req, res) => {
+    const search = req.query.q;
+    
+    if (!search || search.trim().length === 0) {
+        return res.json([]); // Retorna vazio se não tiver busca
+    }
+
+    const term = `%${search}%`;
+    const sql = `
+        SELECT id, name, avatar, bio 
+        FROM users 
+        WHERE name LIKE ? 
+        LIMIT 5
+    `;
+
+    db.query(sql, [term], (err, results) => {
+        if (err) return res.status(500).json({ msg: "Erro ao buscar usuários" });
+        res.json(results);
+    });
+});
 
 // Voto com Toggle (Remove se clicar de novo)
 app.post('/api/community/vote', verifyToken, (req, res) => {
