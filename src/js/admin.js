@@ -167,9 +167,9 @@ const TEMPLATE_RECIPE = `Atue como Nutricionista. Gere JSON Array com [QTD] rece
 
 // --- INICIALIZAÇÃO ---
 window.onload = async function () {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (user && user.name)
-    document.getElementById("user-display").innerText = user.name;
+  // const user = JSON.parse(localStorage.getItem("user"));
+  // if (user && user.name)
+  //   document.getElementById("user-display").innerText = user.name;
 
   // Configura Sidebar Mobile
   const btnOpen = document.getElementById("btn-open-sidebar");

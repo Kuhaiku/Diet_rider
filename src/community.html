@@ -10,115 +10,139 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; height: 100dvh; }
-        /* Scrollbar suave */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .like-anim:active { transform: scale(1.2); }
-        /* Ajuste para mobile input */
-        @media (max-width: 768px) { input, select, textarea { font-size: 16px !important; } }
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="flex flex-col md:flex-row overflow-hidden text-slate-800 bg-slate-50">
+<body class="flex flex-col md:flex-row min-h-screen overflow-hidden">
 
-    <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden fade-in"></div>
+    <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden fade-in"></div>
 
-    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 shadow-2xl md:shadow-sm transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col h-full">
-        <div class="p-6 border-b border-slate-100 flex justify-between items-center h-16">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl md:shadow-none h-full">
+        <div class="p-6 border-b border-slate-100 flex justify-between items-center">
             <h1 class="font-bold text-xl text-slate-900 tracking-tight flex items-center gap-2">
-                <i class="fa-solid fa-users text-indigo-600"></i> Comunidade
+                <i class="fa-solid fa-bicycle text-indigo-600"></i> Diet & Ride
             </h1>
-            <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-red-500 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
         </div>
 
-        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-            <a href="app.html" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
-                <i class="fa-solid fa-calendar-check w-6 text-slate-400"></i> Meu Planner
+        <div class="flex-1 overflow-y-auto p-4 space-y-2">
+            
+            <div class="px-2 mb-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Social</div>
+            
+            <a href="community.html" class="flex items-center w-full px-4 py-3 text-sm font-bold text-indigo-700 bg-indigo-50 rounded-xl border border-indigo-100 shadow-sm">
+                <i class="fa-solid fa-users w-6"></i> Feed Geral
             </a>
-            <a href="community.html" class="flex items-center w-full px-4 py-3 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg transition-colors">
-                <i class="fa-solid fa-users w-6 text-indigo-600"></i> Feed da Comunidade
+
+            <a id="link-my-profile" href="#" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
+                <i class="fa-solid fa-user-circle w-6"></i> Meu Perfil
             </a>
-            <div class="pt-4 mt-4 border-t border-slate-100">
-                <a href="admin.html" class="flex items-center w-full px-4 py-3 text-sm font-bold text-slate-700 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 rounded-lg transition-all border border-slate-200">
-                    <i class="fa-solid fa-gear w-6 text-slate-500"></i> Configurações
-                </a>
-            </div>
-        </nav>
+
+            <div class="border-t border-slate-100 my-4"></div>
+            
+            <div class="px-2 mb-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Ferramentas</div>
+
+            <a href="admin.html?view=planner" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
+                <i class="fa-solid fa-calendar-days w-6"></i> Meus Planos
+
+            <a href="admin.html?view=library" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
+                <i class="fa-solid fa-box-open w-6"></i> Biblioteca (Estoque)
+            </a>
+        </div>
+
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+            <button onclick="logout()" class="flex items-center w-full px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors gap-2">
+                <i class="fa-solid fa-right-from-bracket"></i> Sair
+            </button>
+        </div>
     </aside>
 
-    <div class="md:hidden h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 fixed top-0 left-0 right-0 z-30 shadow-sm">
-        <span class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-users text-indigo-600"></i> Comunidade</span>
-        <button onclick="toggleSidebar()" class="p-2 text-slate-600 bg-slate-50 rounded-lg active:bg-slate-100"><i class="fa-solid fa-bars text-xl"></i></button>
+    <div class="md:hidden h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-20 flex-shrink-0 w-full">
+        <span class="font-bold text-lg text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-bicycle text-indigo-600"></i> Comunidade
+        </span>
+        <button onclick="toggleSidebar()" class="p-2 text-slate-600 bg-slate-50 rounded-lg border border-slate-200">
+            <i class="fa-solid fa-bars text-xl"></i>
+        </button>
     </div>
 
-    <main class="flex-1 flex flex-col min-w-0 bg-slate-100 relative md:ml-72 transition-all duration-300 h-full overflow-y-auto pt-16 md:pt-0">
-        
-        <div class="max-w-3xl mx-auto w-full p-4 md:p-8 pb-32">
+    <main class="flex-1 overflow-y-auto bg-slate-50 md:ml-72 transition-all duration-300 h-screen">
+        <div class="max-w-2xl mx-auto p-4 md:p-8 pb-24">
             
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6" id="create-post-box">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold text-lg flex-shrink-0">
-                        <i class="fa-solid fa-user"></i>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 mb-8 fade-in">
+                <h2 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square text-indigo-500"></i> Criar Postagem
+                </h2>
+                
+                <input type="text" id="post-title" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors font-medium" placeholder="Título da sua ideia...">
+                
+                <textarea id="post-desc" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none h-24" placeholder="Descreva sua receita, dicas ou modo de preparo..."></textarea>
+                
+                <div class="flex flex-col md:flex-row gap-3 items-center">
+                    <div class="relative w-full">
+                        <i class="fa-brands fa-youtube absolute left-3 top-3.5 text-red-500"></i>
+                        <input type="text" id="post-yt" class="w-full pl-10 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors" placeholder="Link do YouTube (Opcional)">
                     </div>
-                    <input type="text" id="post-title" placeholder="Título da postagem..." class="flex-1 bg-slate-50 border-b border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 font-bold text-slate-700 transition-colors w-full">
-                </div>
-                
-                <textarea id="post-desc" rows="3" placeholder="Descreva sua dieta ou receita..." class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm focus:outline-none focus:border-indigo-500 mb-3 resize-none"></textarea>
-                
-                <div class="flex flex-col md:flex-row gap-3">
-                    <input type="text" id="post-yt" placeholder="Link do YouTube (Opcional)" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-red-400">
                     
-                    <div class="flex gap-2">
-                        <button onclick="openAttachModal()" id="btn-attach" class="flex-1 px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 border border-slate-200 flex items-center justify-center gap-2 whitespace-nowrap transition-colors">
-                            <i class="fa-solid fa-paperclip"></i> <span id="attach-label">Anexar</span>
-                        </button>
-                        
-                        <button onclick="createPost()" class="flex-1 px-6 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-transform active:scale-95">
-                            <i class="fa-solid fa-paper-plane"></i> Publicar
-                        </button>
-                    </div>
+                    <input type="hidden" id="post-json-content">
+
+                    <button onclick="openAttachModal()" class="w-full md:w-auto px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 border border-indigo-200 whitespace-nowrap">
+                        <i class="fa-solid fa-paperclip"></i> <span id="attach-label">Anexar</span>
+                    </button>
+                    
+                    <button onclick="createPost()" class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-lg hover:shadow-indigo-500/30 transition-all transform active:scale-95 whitespace-nowrap">
+                        Publicar
+                    </button>
                 </div>
-                <input type="hidden" id="post-json-content">
             </div>
 
-            <div id="community-feed" class="space-y-6">
+            <div id="community-feed">
                 <div class="text-center py-10">
-                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-500 text-2xl"></i>
-                    <p class="text-slate-400 text-sm mt-2">Carregando feed...</p>
+                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-500 text-3xl"></i>
+                    <p class="text-slate-400 text-sm mt-2">Carregando comunidade...</p>
                 </div>
             </div>
-
+            
         </div>
     </main>
 
-    <div id="attach-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[60] flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]">
+    <div id="attach-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-800">Escolha o que anexar</h3>
+                <h3 class="font-bold text-slate-800">Anexar Conteúdo</h3>
                 <button onclick="closeAttachModal()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="p-2 border-b border-slate-100 flex gap-2">
-                <button onclick="loadAttachList('recipe')" id="tab-recipe" class="flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700">Receitas</button>
-                <button onclick="loadAttachList('plan')" id="tab-plan" class="flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500">Planos Salvos</button>
+            
+            <div class="p-2 flex gap-2 border-b border-slate-100">
+                <button onclick="loadAttachList('recipe')" id="tab-recipe" class="flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700 transition-colors">Receitas</button>
+                <button onclick="loadAttachList('plan')" id="tab-plan" class="flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500 transition-colors">Planos</button>
             </div>
-            <div id="attach-list" class="flex-1 overflow-y-auto p-2 bg-white space-y-1"></div>
+
+            <div id="attach-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                </div>
         </div>
     </div>
 
-    <div id="report-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[60] flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden p-6">
-            <h3 class="font-bold text-red-600 mb-4 text-lg"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Denunciar Post</h3>
-            <textarea id="report-reason" class="w-full h-24 border border-slate-300 rounded-lg p-3 text-sm mb-4 resize-none focus:outline-none focus:border-red-400" placeholder="Motivo da denúncia..."></textarea>
+    <div id="report-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
+            <h3 class="font-bold text-lg text-slate-800 mb-2">Denunciar Postagem</h3>
+            <p class="text-sm text-slate-500 mb-4">Por favor, descreva o motivo da denúncia.</p>
             <input type="hidden" id="report-post-id">
+            <textarea id="report-reason" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm mb-4 focus:border-red-500 outline-none resize-none" rows="3" placeholder="Motivo..."></textarea>
             <div class="flex justify-end gap-2">
                 <button onclick="closeReportModal()" class="px-4 py-2 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-lg">Cancelar</button>
-                <button onclick="submitReport()" class="px-4 py-2 bg-red-600 text-white font-bold text-sm rounded-lg hover:bg-red-700">Enviar</button>
+                <button onclick="submitReport()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-lg shadow">Enviar Denúncia</button>
             </div>
         </div>
     </div>
 
-    <script src="./js/community.js"></script>
+    <script src="js/community.js"></script>
 </body>
 </html>
