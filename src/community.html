@@ -13,10 +13,8 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Scrollbar personalizada */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row min-h-screen overflow-hidden">
@@ -34,26 +32,23 @@
         </div>
 
         <div class="flex-1 overflow-y-auto p-4 space-y-2">
-            
             <div class="px-2 mb-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Social</div>
-            
             <a href="community.html" class="flex items-center w-full px-4 py-3 text-sm font-bold text-indigo-700 bg-indigo-50 rounded-xl border border-indigo-100 shadow-sm">
                 <i class="fa-solid fa-users w-6"></i> Feed Geral
             </a>
-
             <a id="link-my-profile" href="#" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
                 <i class="fa-solid fa-user-circle w-6"></i> Meu Perfil
             </a>
-
             <div class="border-t border-slate-100 my-4"></div>
-            
             <div class="px-2 mb-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Ferramentas</div>
-
-            <a href="admin.html?view=planner" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
-                <i class="fa-solid fa-calendar-days w-6"></i> Meus Planos
-
-            <a href="admin.html?view=library" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
+            <a href="app.html?view=planner" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
+                <i class="fa-solid fa-calendar-days w-6"></i> Planejador Atual
+            </a>
+            <a href="app.html?view=library" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
                 <i class="fa-solid fa-box-open w-6"></i> Biblioteca (Estoque)
+            </a>
+            <a href="app.html?view=presets" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
+                <i class="fa-solid fa-folder-bookmark w-6"></i> Meus Planos
             </a>
         </div>
 
@@ -65,97 +60,60 @@
     </aside>
 
     <div class="md:hidden h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sticky top-0 z-20 flex-shrink-0 w-full">
-        <span class="font-bold text-lg text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-bicycle text-indigo-600"></i> Comunidade
-        </span>
-        <button onclick="toggleSidebar()" class="p-2 text-slate-600 bg-slate-50 rounded-lg border border-slate-200">
-            <i class="fa-solid fa-bars text-xl"></i>
-        </button>
+        <span class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-users text-indigo-600"></i> Comunidade</span>
+        <button onclick="toggleSidebar()" class="p-2 text-slate-600 bg-slate-50 rounded-lg border border-slate-200"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
 
-    <main class="flex-1 overflow-y-auto bg-slate-50 md:ml-72 transition-all duration-300 h-screen">
-        <div class="max-w-2xl mx-auto p-4 md:p-8 pb-24">
+    <main class="flex-1 overflow-y-auto bg-slate-100 md:ml-72 transition-all duration-300 h-screen relative">
+        <div class="max-w-3xl mx-auto w-full p-4 md:p-8 pb-32">
+            
             <div class="mb-6 relative group z-10">
-    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-        <i class="fa-solid fa-magnifying-glass text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
-    </div>
-    <input 
-        type="text" 
-        id="search-input" 
-        onkeyup="debounceSearch()" 
-        class="w-full bg-white border border-slate-200 rounded-full pl-12 pr-12 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 shadow-sm transition-all" 
-        placeholder="Buscar por Chef, Receita ou Plano..."
-    >
-    <button id="btn-clear-search" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer">
-        <i class="fa-solid fa-xmark"></i>
-    </button>
-    <div id="user-search-results" class="hidden mb-6 space-y-2 fade-in">
-    </div>
-</div>
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 mb-8 fade-in">
-                <h2 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-pen-to-square text-indigo-500"></i> Criar Postagem
-                </h2>
-                
-                <input type="text" id="post-title" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors font-medium" placeholder="Título da sua ideia...">
-                
-                <textarea id="post-desc" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none h-24" placeholder="Descreva sua receita, dicas ou modo de preparo..."></textarea>
-                
-                <div class="flex flex-col md:flex-row gap-3 items-center">
-                    <div class="relative w-full">
-                        <i class="fa-brands fa-youtube absolute left-3 top-3.5 text-red-500"></i>
-                        <input type="text" id="post-yt" class="w-full pl-10 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors" placeholder="Link do YouTube (Opcional)">
-                    </div>
-                    
-                    <input type="hidden" id="post-json-content">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+                </div>
+                <input type="text" id="search-input" onkeyup="debounceSearch()" class="w-full bg-white border border-slate-200 rounded-full pl-12 pr-12 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 shadow-sm transition-all" placeholder="Buscar por Chef, Receita ou Plano...">
+                <button id="btn-clear-search" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
 
-                    <button onclick="openAttachModal()" class="w-full md:w-auto px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 border border-indigo-200 whitespace-nowrap">
-                        <i class="fa-solid fa-paperclip"></i> <span id="attach-label">Anexar</span>
-                    </button>
-                    
-                    <button onclick="createPost()" class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-lg hover:shadow-indigo-500/30 transition-all transform active:scale-95 whitespace-nowrap">
-                        Publicar
-                    </button>
+            <div id="user-search-results" class="hidden mb-6 space-y-2 fade-in">
+                </div>
+
+            <div id="new-posts-btn" onclick="loadPosts()" class="hidden sticky top-2 z-10 mx-auto text-center mb-4 cursor-pointer animate-bounce">
+                <span class="bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg hover:bg-indigo-700 transition-colors"><i class="fa-solid fa-arrow-up mr-1"></i> Novas publicações</span>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 mb-8 fade-in">
+                <h2 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-pen-to-square text-indigo-500"></i> Criar Postagem</h2>
+                <input type="text" id="post-title" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors font-medium" placeholder="Título da sua ideia...">
+                <textarea id="post-desc" class="w-full mb-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors resize-none h-24" placeholder="Descreva sua receita, dicas ou modo de preparo..."></textarea>
+                <div class="flex flex-col md:flex-row gap-3 items-center">
+                    <div class="relative w-full"><i class="fa-brands fa-youtube absolute left-3 top-3.5 text-red-500"></i><input type="text" id="post-yt" class="w-full pl-10 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition-colors" placeholder="Link do YouTube (Opcional)"></div>
+                    <input type="hidden" id="post-json-content">
+                    <button onclick="openAttachModal()" class="w-full md:w-auto px-6 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 border border-indigo-200 whitespace-nowrap"><i class="fa-solid fa-paperclip"></i> <span id="attach-label">Anexar</span></button>
+                    <button onclick="createPost()" class="w-full md:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-lg hover:shadow-indigo-500/30 transition-all transform active:scale-95 whitespace-nowrap">Publicar</button>
                 </div>
             </div>
 
             <div id="community-feed">
-                <div class="text-center py-10">
-                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-500 text-3xl"></i>
-                    <p class="text-slate-400 text-sm mt-2">Carregando comunidade...</p>
-                </div>
+                <div class="text-center py-10"><i class="fa-solid fa-circle-notch fa-spin text-indigo-500 text-3xl"></i><p class="text-slate-400 text-sm mt-2">Carregando comunidade...</p></div>
             </div>
-            
         </div>
     </main>
 
     <div id="attach-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 fade-in">
         <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-800">Anexar Conteúdo</h3>
-                <button onclick="closeAttachModal()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            
-            <div class="p-2 flex gap-2 border-b border-slate-100">
-                <button onclick="loadAttachList('recipe')" id="tab-recipe" class="flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700 transition-colors">Receitas</button>
-                <button onclick="loadAttachList('plan')" id="tab-plan" class="flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500 transition-colors">Planos</button>
-            </div>
-
-            <div id="attach-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                </div>
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50"><h3 class="font-bold text-slate-800">Anexar Conteúdo</h3><button onclick="closeAttachModal()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="p-2 flex gap-2 border-b border-slate-100"><button onclick="loadAttachList('recipe')" id="tab-recipe" class="flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700 transition-colors">Receitas</button><button onclick="loadAttachList('plan')" id="tab-plan" class="flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500 transition-colors">Planos</button></div>
+            <div id="attach-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar"></div>
         </div>
     </div>
 
     <div id="report-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 fade-in">
         <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
             <h3 class="font-bold text-lg text-slate-800 mb-2">Denunciar Postagem</h3>
-            <p class="text-sm text-slate-500 mb-4">Por favor, descreva o motivo da denúncia.</p>
             <input type="hidden" id="report-post-id">
             <textarea id="report-reason" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm mb-4 focus:border-red-500 outline-none resize-none" rows="3" placeholder="Motivo..."></textarea>
-            <div class="flex justify-end gap-2">
-                <button onclick="closeReportModal()" class="px-4 py-2 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-lg">Cancelar</button>
-                <button onclick="submitReport()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-lg shadow">Enviar Denúncia</button>
-            </div>
+            <div class="flex justify-end gap-2"><button onclick="closeReportModal()" class="px-4 py-2 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-lg">Cancelar</button><button onclick="submitReport()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-lg shadow">Enviar Denúncia</button></div>
         </div>
     </div>
 

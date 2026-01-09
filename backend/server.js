@@ -39,12 +39,10 @@ function verifyToken(req, res, next) {
 function verifyOwner(req, res, next) {
     db.query('SELECT email FROM users WHERE id = ?', [req.userId], (err, results) => {
         if (err || results.length === 0) return res.status(500).json({ msg: "Erro verificação owner" });
-        
         const userEmail = results[0].email;
         const ownerEmail = process.env.OWNER_EMAIL;
-
         if (userEmail !== ownerEmail) {
-            return res.status(403).json({ msg: "Acesso negado. Apenas o Dono Supremo." });
+            return res.status(403).json({ msg: "Acesso negado." });
         }
         next();
     });
@@ -57,7 +55,6 @@ app.post('/auth/register', async (req, res) => {
     db.query('SELECT email FROM users WHERE email = ?', [email], async (err, results) => {
         if (results.length > 0) return res.status(400).json({ msg: 'Email já existe.' });
         const hash = await bcrypt.hash(password, 8);
-        // Define likes_public como 1 (público) por padrão
         db.query('INSERT INTO users SET ?', { name, email, password: hash, can_post: 1, is_owner: 0, likes_public: 1 }, (err) => {
             if (err) return res.status(500).json({ error: err });
             res.status(201).json({ msg: 'Criado!' });
@@ -71,26 +68,14 @@ app.post('/auth/login', (req, res) => {
         if (results.length === 0 || !(await bcrypt.compare(password, results[0].password))) {
             return res.status(401).json({ msg: 'Dados incorretos.' });
         }
-        
         const isOwnerEnv = (email === process.env.OWNER_EMAIL);
         const token = jwt.sign({ id: results[0].id }, process.env.JWT_SECRET, { expiresIn: '30d' });
-        
-        res.json({ 
-            token, 
-            user: { 
-                name: results[0].name, 
-                email, 
-                id: results[0].id,
-                avatar: results[0].avatar, 
-                is_owner: isOwnerEnv ? 1 : 0 
-            } 
-        });
+        res.json({ token, user: { name: results[0].name, email, id: results[0].id, avatar: results[0].avatar, is_owner: isOwnerEnv ? 1 : 0 } });
     });
 });
 
 // --- ROTAS DE PERFIL ---
 
-// 1. Perfil Público (Adicionado likes_public)
 app.get('/api/public/user/:id', (req, res) => {
     const sql = 'SELECT id, name, avatar, bio, social_links, likes_public, created_at FROM users WHERE id = ?';
     db.query(sql, [req.params.id], (err, results) => {
@@ -100,17 +85,13 @@ app.get('/api/public/user/:id', (req, res) => {
     });
 });
 
-// 2. Atualizar Meu Perfil (Suporta likes_public)
 app.put('/api/user/profile', verifyToken, (req, res) => {
     const { bio, avatar, social_links, likes_public } = req.body;
-    
     const linksJson = JSON.stringify(social_links || []);
-    // Tratamento para garantir booleano/inteiro correto
     let isPublic = 1;
     if (likes_public !== undefined) {
         isPublic = (likes_public === true || likes_public === 1 || likes_public === '1') ? 1 : 0;
     }
-
     const sql = 'UPDATE users SET bio = ?, avatar = ?, social_links = ?, likes_public = ? WHERE id = ?';
     db.query(sql, [bio, avatar, linksJson, isPublic, req.userId], (err) => {
         if(err) return res.status(500).json({msg: "Erro ao atualizar perfil"});
@@ -118,78 +99,105 @@ app.put('/api/user/profile', verifyToken, (req, res) => {
     });
 });
 
-// 3. Posts de um Usuário (Público)
 app.get('/api/public/user/:id/posts', (req, res) => {
     const sql = `
-        SELECT 
-            p.*, 
-            u.name as author_name,
-            u.avatar as author_avatar,
-            (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'like') as likes_count,
-            (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'dislike') as dislikes_count
+        SELECT p.*, u.name as author_name, u.avatar as author_avatar,
+        (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'like') as likes_count,
+        (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'dislike') as dislikes_count
         FROM community_posts p
         JOIN users u ON p.user_id = u.id
         WHERE p.user_id = ?
         ORDER BY p.created_at DESC
     `;
     db.query(sql, [req.params.id], (err, results) => {
-        if (err) return res.status(500).json({ msg: "Erro ao buscar posts" });
+        if (err) return res.status(500).json({ msg: "Erro posts" });
         res.json(results);
     });
 });
 
-// 4. Curtidas de um Usuário (CORRIGIDO ORDENAÇÃO)
 app.get('/api/public/user/:id/likes', verifyToken, (req, res) => {
     const targetUserId = req.params.id;
     const requestingUserId = req.userId;
-
-    // Checa privacidade
     db.query('SELECT likes_public FROM users WHERE id = ?', [targetUserId], (err, userRes) => {
         if (err || userRes.length === 0) return res.status(404).json({ msg: "Usuário não encontrado" });
-
         const isPublic = userRes[0].likes_public === 1;
         const isOwner = parseInt(targetUserId) === requestingUserId;
+        if (!isPublic && !isOwner) return res.status(403).json({ msg: "Privado" });
 
-        // Se for privado E quem pede não é o dono -> Bloqueia
-        if (!isPublic && !isOwner) {
-            return res.status(403).json({ msg: "Privado" });
-        }
-
-        // Busca posts curtidos
-        // Mudado ORDER BY para cv.id para evitar erro de coluna inexistente
         const sql = `
-            SELECT 
-                p.*, 
-                u.name as author_name,
-                u.avatar as author_avatar,
-                (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'like') as likes_count,
-                (SELECT vote_type FROM community_votes v WHERE v.post_id = p.id AND v.user_id = ?) as my_vote
+            SELECT p.*, u.name as author_name, u.avatar as author_avatar,
+            (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'like') as likes_count,
+            (SELECT vote_type FROM community_votes v WHERE v.post_id = p.id AND v.user_id = ?) as my_vote
             FROM community_posts p
             JOIN users u ON p.user_id = u.id
             JOIN community_votes cv ON cv.post_id = p.id
             WHERE cv.user_id = ? AND cv.vote_type = 'like'
             ORDER BY cv.id DESC 
         `;
-
         db.query(sql, [requestingUserId, targetUserId], (err, results) => {
-            if (err) {
-                console.error("ERRO SQL LIKES:", err); // Log no servidor para debug
-                return res.status(500).json({ msg: "Erro SQL ao buscar curtidas" });
-            }
+            if (err) return res.status(500).json({ msg: "Erro SQL" });
             res.json(results);
         });
     });
 });
 
-
 // --- ROTAS DA COMUNIDADE ---
+
+// 1. ROTA DE BUSCA DE USUÁRIOS (Esta é a rota que estava faltando e dando erro 404)
+app.get('/api/community/users', verifyToken, (req, res) => {
+    const search = req.query.q;
+    const showAll = req.query.all === 'true'; 
+
+    if (!search || search.trim().length === 0) return res.json([]); 
+
+    const term = `%${search}%`;
+    // Busca simples por nome
+    let sql = `SELECT id, name, avatar, bio FROM users WHERE name LIKE ?`;
+    
+    // Se não for "ver todos", limita a 6 resultados
+    if (!showAll) {
+        sql += ` LIMIT 6`;
+    }
+
+    db.query(sql, [term], (err, results) => {
+        if (err) return res.status(500).json({ msg: "Erro ao buscar usuários" });
+        res.json(results);
+    });
+});
+
+// 2. Feed Geral com Busca de Posts
+app.get('/api/community/posts', verifyToken, (req, res) => {
+    const search = req.query.q;
+    let sql = `
+        SELECT p.*, u.name as author_name, u.avatar as author_avatar,
+        (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'like') as likes_count,
+        (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'dislike') as dislikes_count,
+        (SELECT vote_type FROM community_votes v WHERE v.post_id = p.id AND v.user_id = ?) as my_vote
+        FROM community_posts p
+        JOIN users u ON p.user_id = u.id
+    `;
+    const params = [req.userId];
+    
+    // Filtro de busca unificado para posts
+    if (search) {
+        sql += ` WHERE p.title LIKE ? OR p.description LIKE ? OR u.name LIKE ?`;
+        const term = `%${search}%`;
+        params.push(term, term, term);
+    }
+    
+    sql += ` ORDER BY p.created_at DESC LIMIT 50`;
+    
+    db.query(sql, params, (err, results) => {
+        if (err) return res.status(500).json({ msg: "Erro posts" });
+        res.json(results);
+    });
+});
 
 app.post('/api/community/post', verifyToken, (req, res) => {
     const { title, description, youtube_link, content_json } = req.body;
     db.query('SELECT can_post FROM users WHERE id = ?', [req.userId], (err, results) => {
         if (err) return res.status(500).json({msg: "Erro DB"});
-        if (results[0].can_post === 0) return res.status(403).json({msg: "Você está proibido de postar."});
-
+        if (results[0].can_post === 0) return res.status(403).json({msg: "Proibido postar."});
         const sql = 'INSERT INTO community_posts (user_id, title, description, youtube_link, content_json) VALUES (?, ?, ?, ?, ?)';
         db.query(sql, [req.userId, title, description, youtube_link, JSON.stringify(content_json)], (err) => {
             if (err) return res.status(500).json({ msg: "Erro ao postar" });
@@ -198,87 +206,19 @@ app.post('/api/community/post', verifyToken, (req, res) => {
     });
 });
 
-app.get('/api/community/posts', verifyToken, (req, res) => {
-    const search = req.query.q;
-    let sql = `
-        SELECT 
-            p.*, 
-            u.name as author_name,
-            u.avatar as author_avatar,
-            (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'like') as likes_count,
-            (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'dislike') as dislikes_count,
-            (SELECT vote_type FROM community_votes v WHERE v.post_id = p.id AND v.user_id = ?) as my_vote
-        FROM community_posts p
-        JOIN users u ON p.user_id = u.id
-    `;
-    
-    const params = [req.userId];
-
-    if (search) {
-        sql += ` WHERE p.title LIKE ? OR p.description LIKE ? OR u.name LIKE ?`;
-        const term = `%${search}%`;
-        params.push(term, term, term);
-    }
-
-    sql += ` ORDER BY p.created_at DESC LIMIT 50`;
-
-    db.query(sql, params, (err, results) => {
-        if (err) return res.status(500).json({ msg: "Erro posts" });
-        res.json(results);
-    });
-});
-// Rota de Busca de Usuários (Para o autocomplete/busca de perfil)
-app.get('/api/community/users', verifyToken, (req, res) => {
-    const search = req.query.q;
-    
-    if (!search || search.trim().length === 0) {
-        return res.json([]); // Retorna vazio se não tiver busca
-    }
-
-    const term = `%${search}%`;
-    const sql = `
-        SELECT id, name, avatar, bio 
-        FROM users 
-        WHERE name LIKE ? 
-        LIMIT 5
-    `;
-
-    db.query(sql, [term], (err, results) => {
-        if (err) return res.status(500).json({ msg: "Erro ao buscar usuários" });
-        res.json(results);
-    });
-});
-
-// Voto com Toggle (Remove se clicar de novo)
 app.post('/api/community/vote', verifyToken, (req, res) => {
     const { post_id, vote_type } = req.body; 
-    
-    // Verifica voto existente
     db.query('SELECT * FROM community_votes WHERE post_id = ? AND user_id = ?', [post_id, req.userId], (err, results) => {
         if (err) return res.status(500).json({ msg: "Erro SQL" });
-
         if (results.length > 0) {
             const currentVote = results[0].vote_type;
             if (currentVote === vote_type) {
-                // Toggle: Remove
-                db.query('DELETE FROM community_votes WHERE id = ?', [results[0].id], (err) => {
-                    if (err) return res.status(500).json({ msg: "Erro delete vote" });
-                    res.json({ msg: "Voto removido" });
-                });
+                db.query('DELETE FROM community_votes WHERE id = ?', [results[0].id], (err) => res.json({ msg: "Removido" }));
             } else {
-                // Atualiza
-                db.query('UPDATE community_votes SET vote_type = ? WHERE id = ?', [vote_type, results[0].id], (err) => {
-                    if (err) return res.status(500).json({ msg: "Erro update vote" });
-                    res.json({ msg: "Voto atualizado" });
-                });
+                db.query('UPDATE community_votes SET vote_type = ? WHERE id = ?', [vote_type, results[0].id], (err) => res.json({ msg: "Atualizado" }));
             }
         } else {
-            // Insere
-            db.query('INSERT INTO community_votes (post_id, user_id, vote_type) VALUES (?, ?, ?)', 
-                [post_id, req.userId, vote_type], (err) => {
-                if (err) return res.status(500).json({ msg: "Erro insert vote" });
-                res.json({ msg: "Voto computado" });
-            });
+            db.query('INSERT INTO community_votes (post_id, user_id, vote_type) VALUES (?, ?, ?)', [post_id, req.userId, vote_type], (err) => res.json({ msg: "Computado" }));
         }
     });
 });
@@ -286,27 +226,17 @@ app.post('/api/community/vote', verifyToken, (req, res) => {
 app.delete('/api/community/post/:id', verifyToken, (req, res) => {
     db.query('SELECT user_id FROM community_posts WHERE id = ?', [req.params.id], (err, results) => {
         if (err || results.length === 0) return res.status(404).json({ msg: "Post não encontrado" });
-        
         const postOwnerId = results[0].user_id;
         db.query('SELECT email FROM users WHERE id = ?', [req.userId], (err, userRes) => {
-            if (err) return res.status(500).json({ msg: "Erro permissão" });
-
             const currentUserEmail = userRes[0].email;
             const isSystemOwner = (currentUserEmail === process.env.OWNER_EMAIL);
-
-            if (req.userId !== postOwnerId && !isSystemOwner) {
-                return res.status(403).json({ msg: "Não autorizado" });
-            }
-
-            db.query('DELETE FROM community_posts WHERE id = ?', [req.params.id], (err) => {
-                if (err) return res.status(500).json({ msg: "Erro ao deletar" });
-                res.json({ msg: "Post deletado" });
-            });
+            if (req.userId !== postOwnerId && !isSystemOwner) return res.status(403).json({ msg: "Não autorizado" });
+            db.query('DELETE FROM community_posts WHERE id = ?', [req.params.id], (err) => res.json({ msg: "Deletado" }));
         });
     });
 });
 
-// --- ROTAS DE CONFIG (Library, Planner, Presets - Mantidas) ---
+// --- ROTAS DE CONFIG ---
 app.get('/api/library', verifyToken, (req, res) => { db.query('SELECT data FROM recipes WHERE user_id = ?', [req.userId], (err, r) => res.json(r ? r.map(x=>x.data) : [])); });
 app.post('/api/library', verifyToken, (req, res) => { const r=req.body; db.query('DELETE FROM recipes WHERE user_id=? AND front_id=?',[req.userId,r.id],()=>{ db.query('INSERT INTO recipes (user_id,front_id,data) VALUES (?,?,?)',[req.userId,r.id,JSON.stringify(r)],(e)=>res.json({msg:"Salvo"})) }); });
 app.get('/api/presets', verifyToken, (req, res) => { db.query('SELECT data FROM saved_plans WHERE user_id = ? ORDER BY created_at DESC', [req.userId], (err, r) => res.json(r ? r.map(x=>x.data) : [])); });
