@@ -1,0 +1,5 @@
+admin.html
+
+quando eu carrego um plano ele está sobreescrevendo todas as receitas, preciso que ele não faça isso, o plano só pode adicionar, nunca remover receitas, preciso que ele faça uma verificação tambem onde ele não duplique receitas, o nome pode ser o mesmo, mas se mudar qualquer igrediente ele adiciona como uma nova receita, não sei se ele está deletando, mas está fazendo com que visualmente as antigas sumam, na parte das receitas eu preciso ter a opção de apagar em massa tambem as receitas selecionadas
+
+as receitas não estão sendo excluidas
