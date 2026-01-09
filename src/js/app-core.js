@@ -1,80 +1,10 @@
+// ============================================================
+// ARQUIVO: js/app-core.js
+// FUNÇÃO: Lógica Principal (Library, Planner, Presets)
+// DEPENDE DE: js/config.js e js/profile-manager.js
+// ============================================================
 
-// --- CONFIGURAÇÃO INTELIGENTE DA API ---
-const IS_DEV = window.location.port === "5500";
-const API_BASE = IS_DEV
-  ? `http://${window.location.hostname}:3000/api`
-  : "/api";
-const AUTH_URL = IS_DEV
-  ? `http://${window.location.hostname}:3000/auth`
-  : "/auth";
-
-console.log(`🔌 Conectando API em: ${API_BASE}`);
-
-/* ============================================================
-   SISTEMA DE NOTIFICAÇÃO & CONFIRMAÇÃO (UI MODERN)
-   ============================================================ */
-
-// 1. Notificações Toastify (CENTRALIZADAS)
-function notify(text, type = "success") {
-  const bg = type === "error" ? "#ef4444" : "#22c55e"; // Vermelho ou Verde
-
-  Toastify({
-    text: text,
-    duration: 3000,
-    gravity: "top",
-    position: "center", // <--- FORÇA O CENTRO (Evita cobrir menu lateral)
-    style: {
-      background: bg,
-      borderRadius: "50px", // Borda arredondada para visual "pílula"
-      padding: "12px 24px",
-      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-      fontWeight: "600",
-      fontSize: "14px",
-      textAlign: "center",
-    },
-    stopOnFocus: true,
-  }).showToast();
-}
-
-// 2. Sobrescreve o Alert nativo do navegador
-window.alert = function (msg) {
-  // Detecta se é erro pelo texto
-  const isError =
-    msg &&
-    (msg.toLowerCase().includes("erro") ||
-      msg.toLowerCase().includes("preencha"));
-  notify(msg, isError ? "error" : "success");
-};
-
-// 3. Sistema de Confirmação (Modal Customizado)
-let confirmResolver = null;
-
-function showConfirm(text) {
-  const modal = document.getElementById("confirm-modal");
-  const msg = document.getElementById("confirm-msg");
-
-  // Atualiza texto e mostra modal
-  if (msg) msg.innerText = text || "Essa ação não pode ser desfeita.";
-  if (modal) modal.classList.remove("hidden");
-
-  // Retorna Promessa que espera o clique
-  return new Promise((resolve) => {
-    confirmResolver = resolve;
-  });
-}
-
-// Chamado pelos botões do HTML do Modal (Sim/Cancelar)
-window.resolveConfirm = function (result) {
-  const modal = document.getElementById("confirm-modal");
-  if (modal) modal.classList.add("hidden");
-
-  if (confirmResolver) {
-    confirmResolver(result);
-    confirmResolver = null;
-  }
-};
-
-// --- LISTA DE ÍCONES ---
+// --- ESTADO LOCAL DA APLICAÇÃO ---
 const ICON_OPTIONS = [
   { val: "fa-utensils", label: "Geral" },
   { val: "fa-mug-hot", label: "Café" },
@@ -92,73 +22,6 @@ const ICON_OPTIONS = [
   { val: "fa-moon", label: "Jantar" },
 ];
 
-// --- VERIFICAÇÃO DE LOGIN ---
-const token = localStorage.getItem("token");
-if (!token) window.location.href = "login.html";
-
-// ... verificações de token existentes ...
-const user = JSON.parse(localStorage.getItem("user")) || {};
-
-//?
-if (!token) window.location.href = "login.html";
-
-// --- INJEÇÃO DO BOTÃO DE DONO ---
-document.addEventListener("DOMContentLoaded", () => {
-  // Verifica se é dono
-  if (user.is_owner === 1) {
-    console.log("Usuário é DONO. Injetando botão..."); // Log para debug
-
-    const nav = document.querySelector("aside nav");
-    if (nav) {
-      const ownerBtn = document.createElement("a");
-      ownerBtn.href = "owner.html";
-      // Estilo vermelho chamativo
-      ownerBtn.className =
-        "flex items-center w-full px-4 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors mb-4 shadow-lg shadow-red-200 animate-pulse";
-      ownerBtn.innerHTML =
-        '<i class="fa-solid fa-user-shield w-5"></i> Painel do Dono';
-
-      // Coloca no topo do menu
-      nav.prepend(ownerBtn);
-    } else {
-      console.error("Erro: Menu de navegação não encontrado.");
-    }
-  } else {
-    console.log("Usuário NÃO é dono ou is_owner é: ", user.is_owner);
-  }
-});
-
-//?
-
-window.onload = function () {
-  // --- LÓGICA DO BOTÃO DE DONO ---
-  if (user.is_owner === 1) {
-    // Encontra o menu lateral
-    const nav = document.querySelector("aside nav");
-
-    // Cria o botão especial
-    const ownerBtn = document.createElement("a");
-    ownerBtn.href = "owner.html";
-    ownerBtn.className =
-      "flex items-center w-full px-4 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors mb-4 shadow-lg shadow-red-200";
-    ownerBtn.innerHTML =
-      '<i class="fa-solid fa-user-shield w-5"></i> Painel do Dono';
-
-    // Insere no topo do menu
-    nav.prepend(ownerBtn);
-  }
-
-  // ... restante do seu código (loadPresets, etc) ...
-  loadPresets();
-  // ...
-};
-
-const headers = {
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${token}`,
-};
-
-// --- VARIÁVEIS GLOBAIS ---
 let library = [];
 let planner = { 1: {}, 2: {}, 3: {}, 4: {} };
 let themes = {};
@@ -168,40 +31,53 @@ let currentImportType = "";
 let currentPreviewId = null;
 let selectedRecipes = new Set();
 
-// --- TEMPLATES ---
-const TEMPLATE_PLAN = `Atue como um Nutricionista Sênior. Gere um JSON válido com um plano mensal (4 semanas). SEU PERFIL: [PERFIL]. REGRAS: "ingredients" usa "q_daily" em 'g' ou 'ml'. JSON: { "library": [{ "id": "rec_01", "name": "Nome", "cat": "almoco", "icon": "fa-drumstick-bite", "ingredients": [{"n": "Item", "q_daily": 200, "u": "g", "cat": "carnes"}], "steps": ["Passo"] }], "planner": { "1": { "almoco": "rec_01" } }, "themes": { "1": "Tema" } }`;
-const TEMPLATE_RECIPE = `Atue como Nutricionista. Gere JSON Array com [QTD] receitas: [PERFIL]. REGRAS: "q_daily" em 'g'/'ml'. JSON: [{ "id": "rec_01", "name": "Nome", "cat": "cafe", "icon": "fa-mug-hot", "ingredients": [{"n": "Item", "q_daily": 200, "u": "g", "cat": "mercearia"}], "steps": ["Passo"] }]`;
-
-// --- INICIALIZAÇÃO ---
+// --- INICIALIZAÇÃO CENTRAL ---
 window.onload = async function () {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (user && user.name)
-    document.getElementById("user-display").innerText = user.name;
+  // 1. Setup UI Básico
+  // user vem do config.js
+  if (user && user.name) {
+    const display = document.getElementById("user-display");
+    if (display) display.innerText = user.name;
+  }
+  if (user.avatar) {
+    const sbAvatar = document.getElementById("sidebar-avatar");
+    if (sbAvatar) sbAvatar.src = user.avatar;
+  }
 
-  // Configura Sidebar Mobile
-  const btnOpen = document.getElementById("btn-open-sidebar");
-  const btnClose = document.getElementById("btn-close-sidebar");
-  const overlay = document.getElementById("mobile-overlay");
+  // 2. Setup Listeners
+  setupMobileMenu();
+  setupBioCounter();
 
-  if (btnOpen) btnOpen.onclick = toggleSidebar;
-  if (btnClose) btnClose.onclick = toggleSidebar;
-  if (overlay) overlay.onclick = toggleSidebar;
+  // 3. Botão Dono (Admin)
+  if (user.is_owner === 1) renderOwnerButton();
 
-  // Carregamento inicial de dados
+  // 4. Carregar Dados (Em paralelo para ser mais rápido)
   try {
-    await Promise.all([loadLibrary(), loadPlanner(), loadPresets()]);
+    await Promise.all([
+      loadLibrary(),
+      loadPlanner(),
+      loadPresets(),
+      loadUserProfile(), // Função do profile-manager.js
+    ]);
   } catch (e) {
-    console.error("Erro conexão:", e);
+    console.error("Erro na inicialização:", e);
     if (e && e.status === 401) logout();
   }
 
+  // 5. Roteamento Simples via URL
   const params = new URLSearchParams(window.location.search);
-  if (params.get("action") === "gen") {
-    openPromptGen();
-    switchView("presets");
-  } else if (params.get("view") === "library") switchView("library");
+  if (params.get("view") === "profile") switchView("profile");
   else switchView("presets");
 };
+
+function setupMobileMenu() {
+  const btnOpen = document.getElementById("btn-open-sidebar");
+  const btnClose = document.getElementById("btn-close-sidebar");
+  const overlay = document.getElementById("mobile-overlay");
+  if (btnOpen) btnOpen.onclick = toggleSidebar;
+  if (btnClose) btnClose.onclick = toggleSidebar;
+  if (overlay) overlay.onclick = toggleSidebar;
+}
 
 function toggleSidebar() {
   const sb = document.getElementById("sidebar");
@@ -210,13 +86,68 @@ function toggleSidebar() {
   if (ov) ov.classList.toggle("hidden");
 }
 
-function logout() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  window.location.href = "login.html";
+function setupBioCounter() {
+  const bioArea = document.getElementById("profile-bio");
+  if (bioArea) {
+    bioArea.addEventListener("input", function () {
+      const counter = document.getElementById("bio-counter");
+      if (counter) counter.innerText = `${this.value.length}/255`;
+    });
+  }
 }
 
-// --- API ---
+function renderOwnerButton() {
+  const nav = document.querySelector("aside nav");
+  if (!nav) return;
+
+  // Evita duplicar se já existir
+  if (document.getElementById("btn-owner-panel")) return;
+
+  const ownerBtn = document.createElement("a");
+  ownerBtn.id = "btn-owner-panel";
+  ownerBtn.href = "owner.html";
+  ownerBtn.className =
+    "flex items-center w-full px-4 py-3 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors mb-4 shadow-lg shadow-red-200";
+  ownerBtn.innerHTML =
+    '<i class="fa-solid fa-user-shield w-5"></i> Painel do Dono';
+  nav.prepend(ownerBtn);
+}
+
+function switchView(v) {
+  // Esconde todas as views
+  ["library", "planner", "presets", "profile"].forEach((x) => {
+    const el = document.getElementById(`view-${x}`);
+    if (el) el.classList.add("hidden");
+  });
+
+  // Mostra a selecionada
+  const target = document.getElementById(`view-${v}`);
+  if (target) target.classList.remove("hidden");
+
+  // Atualiza sidebar
+  ["nav-library", "nav-planner", "nav-presets", "nav-profile"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const isActive = id === `nav-${v}`;
+    btn.className = isActive
+      ? "flex items-center w-full px-4 py-3 text-sm font-bold text-blue-700 bg-blue-50 rounded-lg shadow-sm mb-1 border border-blue-100"
+      : "flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 transition-colors mb-1";
+
+    const icon = btn.querySelector("i");
+    if (icon) {
+      icon.classList.remove("text-blue-600", "text-slate-400");
+      icon.classList.add(isActive ? "text-blue-600" : "text-slate-400");
+    }
+  });
+
+  // Fecha menu mobile ao trocar de tela
+  if (window.innerWidth < 768) {
+    const sb = document.getElementById("sidebar");
+    if (sb && !sb.classList.contains("-translate-x-full")) toggleSidebar();
+  }
+}
+
+// --- FUNÇÕES DE BIBLIOTECA (LIBRARY) ---
 
 async function loadLibrary() {
   try {
@@ -228,44 +159,11 @@ async function loadLibrary() {
   }
 }
 
-async function loadPlanner() {
-  try {
-    const res = await fetch(`${API_BASE}/planner`, { headers });
-    if (res.ok) {
-      const data = await res.json();
-      const loadedPlanner = data.planner_data || {};
-      planner = {
-        1: loadedPlanner[1] || {},
-        2: loadedPlanner[2] || {},
-        3: loadedPlanner[3] || {},
-        4: loadedPlanner[4] || {},
-      };
-      themes = data.themes_data || {};
-      renderPlanner();
-      loadThemesUI();
-    }
-  } catch (e) {
-    console.error("Erro planner", e);
-  }
-}
-
-async function loadPresets() {
-  try {
-    const res = await fetch(`${API_BASE}/presets`, { headers });
-    if (res.ok) savedPlans = await res.json();
-    renderPresets();
-  } catch (e) {
-    console.error("Erro presets", e);
-  }
-}
-
-// --- LÓGICA & UI: BIBLIOTECA ---
-
 function renderLibrary() {
   const g = document.getElementById("recipe-grid");
-  g.innerHTML = "";
+  if (!g) return;
 
-  // (Opcional) Se tiver campo de busca, filtra
+  g.innerHTML = "";
   const searchInput = document.getElementById("library-search");
   const term = searchInput ? searchInput.value.toLowerCase() : "";
   const filtered = library.filter(
@@ -273,16 +171,15 @@ function renderLibrary() {
       r.name.toLowerCase().includes(term) || r.cat.toLowerCase().includes(term)
   );
 
+  const emptyMsg = document.getElementById("empty-library");
   if (filtered.length === 0) {
-    document.getElementById("empty-library").classList.remove("hidden");
+    if (emptyMsg) emptyMsg.classList.remove("hidden");
     return;
   }
-  document.getElementById("empty-library").classList.add("hidden");
+  if (emptyMsg) emptyMsg.classList.add("hidden");
 
   filtered.forEach((r) => {
     const isSelected = selectedRecipes.has(r.id);
-
-    // Card Clicável
     const cardHtml = `
         <div class="bg-white border ${
           isSelected
@@ -291,43 +188,32 @@ function renderLibrary() {
         } rounded-xl p-4 hover:shadow-md relative group transition-all cursor-pointer" onclick="openRecipeModal('${
       r.id
     }')">
-            
             <div class="flex justify-between mb-2">
                 <div class="flex items-center gap-2">
                     <div onclick="event.stopPropagation(); toggleRecipeSelection('${
                       r.id
-                    }')" 
-                         class="w-8 h-8 rounded cursor-pointer flex items-center justify-center transition-colors ${
-                           isSelected
-                             ? "bg-indigo-600 text-white"
-                             : "bg-slate-100 text-slate-300 hover:bg-slate-200"
-                         }">
-                        <i class="fa-solid fa-check"></i>
-                    </div>
-                    
-                    <span class="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
-                        <i class="fa-solid ${r.icon || "fa-utensils"}"></i>
-                    </span>
+                    }')" class="w-8 h-8 rounded cursor-pointer flex items-center justify-center transition-colors ${
+      isSelected
+        ? "bg-indigo-600 text-white"
+        : "bg-slate-100 text-slate-300 hover:bg-slate-200"
+    }"><i class="fa-solid fa-check"></i></div>
+                    <span class="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center text-sm"><i class="fa-solid ${
+                      r.icon || "fa-utensils"
+                    }"></i></span>
                 </div>
-                
                 <div class="flex gap-1">
                     <button onclick="deleteRecipe('${
                       r.id
-                    }', event)" class="text-slate-300 hover:text-red-500 p-1 delete-btn">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    }', event)" class="text-slate-300 hover:text-red-500 p-1 delete-btn"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </div>
-            
-            <h4 class="font-bold text-slate-800 text-sm mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                ${r.name}
-            </h4>
-            
-            <span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase font-bold">
-                ${r.cat}
-            </span>
+            <h4 class="font-bold text-slate-800 text-sm mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">${
+              r.name
+            }</h4>
+            <span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase font-bold">${
+              r.cat
+            }</span>
         </div>`;
-
     g.innerHTML += cardHtml;
   });
   updateExportButton();
@@ -342,6 +228,8 @@ function toggleRecipeSelection(id) {
 function updateExportButton() {
   const btn = document.getElementById("btn-export-selected");
   const count = document.getElementById("count-selected");
+  if (!btn || !count) return;
+
   if (selectedRecipes.size > 0) {
     btn.classList.remove("hidden");
     btn.classList.add("flex");
@@ -364,119 +252,10 @@ function exportSelectedRecipes() {
   notify(`${exportData.length} receitas exportadas!`);
 }
 
-function downloadAllRecipes() {
-  downloadJSON(library, `backup_completo_receitas.json`);
-}
-
-// --- LÓGICA & UI: PLANOS ---
-
-function renderPresets() {
-  const g = document.getElementById("presets-grid");
-  g.innerHTML = "";
-  if (savedPlans.length === 0) {
-    document.getElementById("empty-presets").classList.remove("hidden");
-    return;
-  }
-  document.getElementById("empty-presets").classList.add("hidden");
-
-  savedPlans.forEach((p) => {
-    g.innerHTML += `
-        <div class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-lg transition-all relative group flex flex-col justify-between">
-            <div>
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-bold text-slate-800 text-lg leading-tight line-clamp-2 pr-2">${
-                      p.name
-                    }</h3>
-                    <div class="flex gap-1 ml-2 shrink-0">
-                        <button onclick="renamePreset('${p.id}', '${
-      p.name
-    }')" class="text-slate-300 hover:text-blue-500 p-1" title="Renomear"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="sharePreset('${
-                          p.id
-                        }')" class="text-slate-300 hover:text-green-500 p-1" title="Compartilhar JSON"><i class="fa-solid fa-share-nodes"></i></button>
-                        <button onclick="deletePreset('${
-                          p.id
-                        }')" class="text-slate-300 hover:text-red-500 p-1" title="Excluir"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-400 font-medium mb-4"><i class="fa-regular fa-calendar mr-1"></i>${
-                  p.date || "Hoje"
-                }</p>
-            </div>
-            <div class="grid grid-cols-2 gap-3 mt-auto">
-                <button onclick="openPreview('${
-                  p.id
-                }')" class="w-full py-2.5 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg">Ver Detalhes</button>
-                <button onclick="loadPreset('${
-                  p.id
-                }')" class="w-full py-2.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-md">Carregar</button>
-            </div>
-        </div>`;
-  });
-}
-
-function sharePreset(id) {
-  const p = savedPlans.find((x) => x.id === id);
-  if (!p) return;
-  const filename = `plano_${p.name
-    .replace(/[^a-z0-9]/gi, "_")
-    .toLowerCase()}.json`;
-  downloadJSON(p, filename);
-}
-
-async function renamePreset(id, currentName) {
-  const newName = prompt("Novo nome para o plano:", currentName);
-  if (newName && newName !== currentName) {
-    try {
-      const res = await fetch(`${API_BASE}/presets/${id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({ name: newName }),
-      });
-      if (res.ok) {
-        const p = savedPlans.find((x) => x.id === id);
-        if (p) p.name = newName;
-        renderPresets();
-      } else {
-        notify("Erro ao renomear.", "error");
-      }
-    } catch (e) {
-      console.error(e);
-      notify("Erro de conexão.", "error");
-    }
-  }
-}
-
-// --- UTILS ---
-function downloadJSON(data, filename) {
-  const jsonStr = JSON.stringify(data, null, 2);
-  const blob = new Blob([jsonStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-function sanitizeRecipe(r) {
-  if (!r.ingredients) r.ingredients = [];
-  r.ingredients.forEach((i) => {
-    if (i.q_week !== undefined && i.q_daily === undefined)
-      i.q_daily = i.q_week / 7;
-    i.q_daily = parseFloat(i.q_daily) || 0;
-  });
-  return r;
-}
-
-// --- CRUD BIBLIOTECA & PLANNER ---
-
 async function saveRecipeToLibrary() {
   const id = document.getElementById("edit-id").value || "rec_" + Date.now();
   const name = document.getElementById("rec-name").value;
-  if (!name) return notify("Nome é obrigatório", "error"); // Usa Notify
+  if (!name) return notify("Nome é obrigatório", "error");
 
   const ings = [];
   document.querySelectorAll(".ing-row").forEach((r) => {
@@ -515,20 +294,19 @@ async function saveRecipeToLibrary() {
     headers,
     body: JSON.stringify(recipe),
   });
+
   const idx = library.findIndex((x) => x.id === id);
   if (idx >= 0) library[idx] = recipe;
   else library.push(recipe);
 
   closeModal();
   renderLibrary();
-  renderPlanner();
+  renderPlanner(); // Atualiza planner caso a receita tenha sido alterada
   notify("Receita salva com sucesso!");
 }
 
-// DELETE RECEITA: Usa showConfirm
 async function deleteRecipe(id, e) {
   if (e) e.stopPropagation();
-
   const confirmed = await showConfirm("Excluir receita permanentemente?");
   if (confirmed) {
     try {
@@ -547,34 +325,101 @@ async function deleteRecipe(id, e) {
   }
 }
 
-async function syncPlanner() {
-  await fetch(`${API_BASE}/planner`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ planner, themes }),
+// --- FUNÇÕES DE PRESETS (PLANOS SALVOS) ---
+
+async function loadPresets() {
+  try {
+    const res = await fetch(`${API_BASE}/presets`, { headers });
+    if (res.ok) savedPlans = await res.json();
+    renderPresets();
+  } catch (e) {
+    console.error("Erro presets", e);
+  }
+}
+
+function renderPresets() {
+  const g = document.getElementById("presets-grid");
+  if (!g) return;
+  g.innerHTML = "";
+
+  const emptyMsg = document.getElementById("empty-presets");
+
+  if (savedPlans.length === 0) {
+    if (emptyMsg) emptyMsg.classList.remove("hidden");
+    return;
+  }
+  if (emptyMsg) emptyMsg.classList.add("hidden");
+
+  savedPlans.forEach((p) => {
+    g.innerHTML += `
+        <div class="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-lg transition-all relative group flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-bold text-slate-800 text-lg leading-tight line-clamp-2 pr-2">${
+                      p.name
+                    }</h3>
+                    <div class="flex gap-1 ml-2 shrink-0">
+                        <button onclick="renamePreset('${p.id}', '${
+      p.name
+    }')" class="text-slate-300 hover:text-blue-500 p-1" title="Renomear"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="sharePreset('${
+                          p.id
+                        }')" class="text-slate-300 hover:text-green-500 p-1" title="Compartilhar JSON"><i class="fa-solid fa-share-nodes"></i></button>
+                        <button onclick="deletePreset('${
+                          p.id
+                        }')" class="text-slate-300 hover:text-red-500 p-1" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 font-medium mb-4"><i class="fa-regular fa-calendar mr-1"></i>${
+                  p.date || "Hoje"
+                }</p>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mt-auto">
+                <button onclick="openPreview('${
+                  p.id
+                }')" class="w-full py-2.5 text-xs font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg">Ver Detalhes</button>
+                <button onclick="loadPreset('${
+                  p.id
+                }')" class="w-full py-2.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-md">Carregar</button>
+            </div>
+        </div>`;
   });
 }
 
-function assignRecipe(id) {
-  if (!planner[pickerContext.w]) planner[pickerContext.w] = {};
-  planner[pickerContext.w][pickerContext.s] = id;
-  syncPlanner();
-  closePicker();
-  renderPlanner();
+async function renamePreset(id, currentName) {
+  const newName = prompt("Novo nome para o plano:", currentName);
+  if (newName && newName !== currentName) {
+    try {
+      const res = await fetch(`${API_BASE}/presets/${id}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ name: newName }),
+      });
+      if (res.ok) {
+        const p = savedPlans.find((x) => x.id === id);
+        if (p) p.name = newName;
+        renderPresets();
+      } else {
+        notify("Erro ao renomear.", "error");
+      }
+    } catch (e) {
+      notify("Erro de conexão.", "error");
+    }
+  }
 }
 
-function clearSlot(w, s, e) {
-  e.stopPropagation();
-  if (planner[w]) delete planner[w][s];
-  syncPlanner();
-  renderPlanner();
-}
-
-function saveThemes() {
-  [1, 2, 3, 4].forEach(
-    (w) => (themes[w] = document.getElementById(`theme-w${w}`).value)
-  );
-  syncPlanner();
+async function deletePreset(id) {
+  const confirmed = await showConfirm("Excluir este plano?");
+  if (confirmed) {
+    try {
+      await fetch(`${API_BASE}/presets/${id}`, { method: "DELETE", headers });
+      savedPlans = savedPlans.filter((x) => x.id !== id);
+      renderPresets();
+      notify("Plano excluído!");
+    } catch (err) {
+      notify("Erro ao excluir", "error");
+    }
+  }
 }
 
 async function saveCurrentAsPreset() {
@@ -596,75 +441,6 @@ async function saveCurrentAsPreset() {
   notify("Plano salvo como preset!");
 }
 
-// DELETE PRESET: Usa showConfirm
-async function deletePreset(id) {
-  const confirmed = await showConfirm("Excluir este plano?");
-  if (confirmed) {
-    try {
-      await fetch(`${API_BASE}/presets/${id}`, { method: "DELETE", headers });
-      savedPlans = savedPlans.filter((x) => x.id !== id);
-      renderPresets();
-      notify("Plano excluído!");
-    } catch (err) {
-      notify("Erro ao excluir", "error");
-    }
-  }
-}
-
-// --- UI & HELPERS ---
-
-function formatDisplay(q, u) {
-  let val = parseFloat(q);
-  if (isNaN(val)) val = 0;
-  let unit = (u || "").toLowerCase();
-  if (unit === "g" && val >= 1000) {
-    return { v: (val / 1000).toFixed(2), u: "kg" };
-  }
-  if (unit === "ml" && val >= 1000) {
-    return { v: (val / 1000).toFixed(2), u: "l" };
-  }
-  if (val % 1 !== 0) val = val.toFixed(1);
-  return { v: val, u: unit };
-}
-
-function switchView(v) {
-  ["library", "planner", "presets"].forEach((x) =>
-    document.getElementById(`view-${x}`).classList.add("hidden")
-  );
-  document.getElementById(`view-${v}`).classList.remove("hidden");
-  ["nav-library", "nav-planner", "nav-presets"].forEach((id) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    const isActive = id === `nav-${v}`;
-    btn.className = isActive
-      ? "flex items-center w-full px-4 py-3 text-sm font-bold text-blue-700 bg-blue-50 rounded-lg shadow-sm mb-1 border border-blue-100"
-      : "flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50 transition-colors mb-1";
-    const icon = btn.querySelector("i");
-    if (icon) {
-      icon.classList.remove("text-blue-600", "text-slate-400");
-      icon.classList.add(isActive ? "text-blue-600" : "text-slate-400");
-    }
-  });
-  const sb = document.getElementById("sidebar");
-  if (
-    sb &&
-    !sb.classList.contains("-translate-x-full") &&
-    window.innerWidth < 768
-  )
-    toggleSidebar();
-}
-
-function loadFileContent(input) {
-  const f = input.files[0];
-  if (!f) return;
-  const r = new FileReader();
-  r.onload = (e) => {
-    document.getElementById("import-text").value = e.target.result;
-  };
-  r.readAsText(f);
-  input.value = "";
-}
-
 function loadPreset(id) {
   const p = savedPlans.find((x) => x.id === id);
   if (p) {
@@ -674,7 +450,11 @@ function loadPreset(id) {
       ? JSON.parse(JSON.stringify(data.planner))
       : { 1: {}, 2: {}, 3: {}, 4: {} };
     themes = data.themes ? JSON.parse(JSON.stringify(data.themes)) : {};
+
+    // Higieniza dados
     library = library.map((r) => sanitizeRecipe(r));
+
+    // Salva receitas carregadas no banco para não quebrar IDs
     if (library.length > 0) {
       library.forEach(async (r) => {
         await fetch(`${API_BASE}/library`, {
@@ -684,6 +464,7 @@ function loadPreset(id) {
         });
       });
     }
+
     syncPlanner();
     renderLibrary();
     renderPlanner();
@@ -692,6 +473,29 @@ function loadPreset(id) {
     notify("Plano carregado!");
   } else {
     notify("Erro: Plano não encontrado.", "error");
+  }
+}
+
+// --- FUNÇÕES DE PLANNER (PLANEJAMENTO) ---
+
+async function loadPlanner() {
+  try {
+    const res = await fetch(`${API_BASE}/planner`, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      const loadedPlanner = data.planner_data || {};
+      planner = {
+        1: loadedPlanner[1] || {},
+        2: loadedPlanner[2] || {},
+        3: loadedPlanner[3] || {},
+        4: loadedPlanner[4] || {},
+      };
+      themes = data.themes_data || {};
+      renderPlanner();
+      loadThemesUI();
+    }
+  } catch (e) {
+    console.error("Erro planner", e);
   }
 }
 
@@ -733,6 +537,7 @@ function openPicker(w, s) {
 function closePicker() {
   document.getElementById("picker-modal").classList.add("hidden");
 }
+
 function renderPickerList() {
   const l = document.getElementById("picker-list");
   const q = document.getElementById("picker-search").value.toLowerCase();
@@ -754,7 +559,113 @@ function renderPickerList() {
   });
 }
 
-// --- PREVIEW ---
+function assignRecipe(id) {
+  if (!planner[pickerContext.w]) planner[pickerContext.w] = {};
+  planner[pickerContext.w][pickerContext.s] = id;
+  syncPlanner();
+  closePicker();
+  renderPlanner();
+}
+
+function clearSlot(w, s, e) {
+  e.stopPropagation();
+  if (planner[w]) delete planner[w][s];
+  syncPlanner();
+  renderPlanner();
+}
+
+async function syncPlanner() {
+  await fetch(`${API_BASE}/planner`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ planner, themes }),
+  });
+}
+
+function saveThemes() {
+  [1, 2, 3, 4].forEach(
+    (w) => (themes[w] = document.getElementById(`theme-w${w}`).value)
+  );
+  syncPlanner();
+}
+
+// --- UTILITÁRIOS E EXPORTAÇÃO ---
+
+function exportToApp() {
+  let d = {};
+  [1, 2, 3, 4].forEach((w) => {
+    let m = {},
+      ml = [];
+    ["cafe", "almoco", "lanche", "jantar"].forEach((s) => {
+      if (!planner[w]) return;
+      const rid = planner[w][s];
+      const r = library.find((x) => x.id === rid);
+      if (r) {
+        m[s] = { name: r.name, ingredients: r.ingredients, steps: r.steps };
+        r.ingredients.forEach((i) => {
+          let ex = ml.find((x) => x.n.toLowerCase() === i.n.toLowerCase());
+          if (ex) ex.q_daily += i.q_daily;
+          else ml.push({ ...i, id: i.n.replace(/[^a-z0-9]/g, "") });
+        });
+      }
+    });
+    d[w] = {
+      headerTitle: `Semana ${w}`,
+      headerSubtitle: themes[w] || "",
+      meals: m,
+      market: ml,
+    };
+  });
+  localStorage.setItem("dietData", JSON.stringify(d));
+  notify("Dados publicados para o App Mobile!");
+}
+
+function downloadJSON(data, filename) {
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function sharePreset(id) {
+  const p = savedPlans.find((x) => x.id === id);
+  if (!p) return;
+  const filename = `plano_${p.name
+    .replace(/[^a-z0-9]/gi, "_")
+    .toLowerCase()}.json`;
+  downloadJSON(p, filename);
+}
+
+function sanitizeRecipe(r) {
+  if (!r.ingredients) r.ingredients = [];
+  r.ingredients.forEach((i) => {
+    if (i.q_week !== undefined && i.q_daily === undefined)
+      i.q_daily = i.q_week / 7;
+    i.q_daily = parseFloat(i.q_daily) || 0;
+  });
+  return r;
+}
+
+function formatDisplay(q, u) {
+  let val = parseFloat(q);
+  if (isNaN(val)) val = 0;
+  let unit = (u || "").toLowerCase();
+  if (unit === "g" && val >= 1000)
+    return { v: (val / 1000).toFixed(2), u: "kg" };
+  if (unit === "ml" && val >= 1000)
+    return { v: (val / 1000).toFixed(2), u: "l" };
+  if (val % 1 !== 0) val = val.toFixed(1);
+  return { v: val, u: unit };
+}
+
+// --- PREVIEW E IMPORTAÇÃO ---
+
 function openPreview(id) {
   const p = savedPlans.find((x) => x.id === id);
   if (!p) return;
@@ -848,47 +759,17 @@ function switchPreviewTab(w) {
     }
   });
   html += `</div></div>`;
-  if (!document.getElementById("style-fade")) {
-    const s = document.createElement("style");
-    s.id = "style-fade";
-    s.innerHTML = `.animate-fade-in { animation: fadeIn 0.3s ease-out; } @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }`;
-    document.head.appendChild(s);
-  }
   document.getElementById("preview-tab-content").innerHTML = html;
 }
 function closePreview() {
   document.getElementById("preview-modal").classList.add("hidden");
 }
 
-// --- OUTROS ---
-function exportToApp() {
-  let d = {};
-  [1, 2, 3, 4].forEach((w) => {
-    let m = {},
-      ml = [];
-    ["cafe", "almoco", "lanche", "jantar"].forEach((s) => {
-      if (!planner[w]) return;
-      const rid = planner[w][s];
-      const r = library.find((x) => x.id === rid);
-      if (r) {
-        m[s] = { name: r.name, ingredients: r.ingredients, steps: r.steps };
-        r.ingredients.forEach((i) => {
-          let ex = ml.find((x) => x.n.toLowerCase() === i.n.toLowerCase());
-          if (ex) ex.q_daily += i.q_daily;
-          else ml.push({ ...i, id: i.n.replace(/[^a-z0-9]/g, "") });
-        });
-      }
-    });
-    d[w] = {
-      headerTitle: `Semana ${w}`,
-      headerSubtitle: themes[w] || "",
-      meals: m,
-      market: ml,
-    };
-  });
-  localStorage.setItem("dietData", JSON.stringify(d));
-  notify("Dados publicados para o App Mobile!");
-}
+// --- IMPORTAÇÃO E IA ---
+
+const TEMPLATE_PLAN = `Atue como um Nutricionista Sênior. Gere um JSON válido com um plano mensal (4 semanas). SEU PERFIL: [PERFIL]. REGRAS: "ingredients" usa "q_daily" em 'g' ou 'ml'. JSON: { "library": [{ "id": "rec_01", "name": "Nome", "cat": "almoco", "icon": "fa-drumstick-bite", "ingredients": [{"n": "Item", "q_daily": 200, "u": "g", "cat": "carnes"}], "steps": ["Passo"] }], "planner": { "1": { "almoco": "rec_01" } }, "themes": { "1": "Tema" } }`;
+const TEMPLATE_RECIPE = `Atue como Nutricionista. Gere JSON Array com [QTD] receitas: [PERFIL]. REGRAS: "q_daily" em 'g'/'ml'. JSON: [{ "id": "rec_01", "name": "Nome", "cat": "cafe", "icon": "fa-mug-hot", "ingredients": [{"n": "Item", "q_daily": 200, "u": "g", "cat": "mercearia"}], "steps": ["Passo"] }]`;
+
 function openPromptGen() {
   document.getElementById("prompt-modal").classList.remove("hidden");
   toggleGenInputs();
@@ -896,6 +777,7 @@ function openPromptGen() {
 function closePromptGen() {
   document.getElementById("prompt-modal").classList.add("hidden");
 }
+
 function toggleGenInputs() {
   const type = document.getElementById("gen-type").value;
   if (type === "recipe") {
@@ -906,6 +788,7 @@ function toggleGenInputs() {
     document.getElementById("gen-input-label").innerText = "Seu Perfil";
   }
 }
+
 function generatePromptText() {
   const type = document.getElementById("gen-type").value;
   const val = document.getElementById("gen-input").value;
@@ -919,6 +802,7 @@ function generatePromptText() {
         ).replace("[PERFIL]", val);
   document.getElementById("gen-output").value = txt;
 }
+
 function copyPromptText() {
   const txt = document.getElementById("gen-output");
   txt.select();
@@ -934,6 +818,7 @@ function copyPromptText() {
     notify("Copiado!");
   }
 }
+
 function openImportModal(type) {
   currentImportType = type;
   document.getElementById("import-title").innerText =
@@ -944,6 +829,18 @@ function openImportModal(type) {
 function closeImportModal() {
   document.getElementById("import-modal").classList.add("hidden");
 }
+
+function loadFileContent(input) {
+  const f = input.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = (e) => {
+    document.getElementById("import-text").value = e.target.result;
+  };
+  r.readAsText(f);
+  input.value = "";
+}
+
 function processImport() {
   try {
     let text = document.getElementById("import-text").value.trim();
@@ -1015,14 +912,14 @@ function processImport() {
   }
 }
 
-// MODAL DE EDIÇÃO DE RECEITA (POPULANDO ÍCONES CORRETAMENTE)
+// --- MODAL DE RECEITA ---
+
 function openRecipeModal(id) {
   document.getElementById("recipe-modal").classList.remove("hidden");
   document.getElementById("edit-id").value = id || "";
   document.getElementById("rec-ingredients").innerHTML = "";
   document.getElementById("rec-steps").innerHTML = "";
 
-  // POPULA O SELECT DE ÍCONES
   const iconSelect = document.getElementById("rec-icon");
   if (iconSelect) {
     iconSelect.innerHTML = "";
@@ -1043,6 +940,7 @@ function openRecipeModal(id) {
         ingredients: [],
         steps: [],
       };
+
   document.getElementById("rec-name").value = r.name;
   document.getElementById("rec-cat").value = r.cat;
 
@@ -1061,6 +959,7 @@ function openRecipeModal(id) {
       l.querySelector(".i-u").value = f.u;
       l.querySelector(".i-c").value = i.cat || "mercearia";
     });
+
   if (r.steps)
     r.steps.forEach((s) => {
       addStepLine();
@@ -1068,20 +967,25 @@ function openRecipeModal(id) {
         .getElementById("rec-steps")
         .lastElementChild.querySelector("textarea").value = s;
     });
+
   if (!id) {
     addRecLine();
     addStepLine();
   }
 }
+
 function closeModal() {
   document.getElementById("recipe-modal").classList.add("hidden");
 }
+
 const tplIngRow = `<div class="grid grid-cols-1 md:grid-cols-12 gap-2 ing-row items-center mb-2 bg-slate-50 p-2 rounded"><div class="md:col-span-5"><input type="text" placeholder="Item" class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm i-n"></div><div class="grid grid-cols-3 gap-2 md:col-span-6"><input type="number" placeholder="0" class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm text-center i-q"><input type="text" placeholder="un" class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-sm text-center i-u"><select class="w-full bg-white border border-slate-200 rounded px-1 py-1 text-xs i-c"><option value="carnes">Carnes</option><option value="horti">Horti</option><option value="mercearia">Merc.</option><option value="outros">Out.</option></select></div><div class="md:col-span-1 text-center"><button onclick="this.closest('.ing-row').remove()" class="text-red-400"><i class="fa-solid fa-xmark"></i></button></div></div>`;
+
 function addRecLine() {
   document
     .getElementById("rec-ingredients")
     .insertAdjacentHTML("beforeend", tplIngRow);
 }
+
 function addStepLine() {
   document
     .getElementById("rec-steps")
