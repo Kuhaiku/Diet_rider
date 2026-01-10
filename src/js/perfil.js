@@ -1,5 +1,5 @@
 //
-
+const API_BASE = "/api";
 const token = localStorage.getItem("token");
 const headers = {
     "Content-Type": "application/json",
