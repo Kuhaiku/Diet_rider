@@ -1,6 +1,17 @@
+const loggedUser = JSON.parse(localStorage.getItem("user")) || null;
+const urlParams = new URLSearchParams(window.location.search);
+const targetId = urlParams.get("id") || (loggedUser ? loggedUser.id : null);
+const deepLinkPostId = urlParams.get("post");
+
 // --- INIT ---
 document.addEventListener("DOMContentLoaded", async () => {
-  // Injeta modal se necessário (função pode estar em community.js ou definida aqui se preferir)
+  const bioEl = document.getElementById("edit-bio");
+  if (bioEl) {
+    bioEl.addEventListener("input", function () {
+      document.getElementById("bio-counter").innerText = `${this.value.length}/255`;
+    });
+  }
+
   if (typeof injectPreviewModal === "function") injectPreviewModal();
 
   if (!targetId) {
@@ -13,18 +24,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAuthUI();
   await loadProfileData();
   switchTab("posts");
-
-  if (deepLinkPostId) {
-    setTimeout(() => {
-      const el = document.getElementById(`post-${deepLinkPostId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Garante que a função global exista (vinda do community.js carregado no HTML)
-        if (typeof openPostDetails === "function")
-          openPostDetails(parseInt(deepLinkPostId));
-      }
-    }, 1000);
-  }
 });
 
 function setupSidebarLinks() {
@@ -527,10 +526,7 @@ const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dhu8un8ty/image/upload";
 const CLOUDINARY_PRESET = "diet_userperfil";
 
 let profileUser = {};
-const loggedUser = JSON.parse(localStorage.getItem("user")) || null;
-const urlParams = new URLSearchParams(window.location.search);
-const targetId = urlParams.get("id") || (loggedUser ? loggedUser.id : null);
-const deepLinkPostId = urlParams.get("post");
+
 
 // --- INIT ---
 document.addEventListener("DOMContentLoaded", async () => {
