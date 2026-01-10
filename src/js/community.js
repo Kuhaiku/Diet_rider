@@ -17,6 +17,7 @@ let allPosts = [];
 let myLibrary = [];
 let myPresets = [];
 let selectedAttachments = new Set();
+let currentAttachType = 'recipe';
 let latestPostId = 0;
 let searchTimeout = null;
 let isSearching = false;
@@ -407,60 +408,80 @@ function closeAttachModal() {
   document.getElementById("attach-modal")?.classList.add("hidden");
 }
 function loadAttachList(type) {
+  currentAttachType = type; // Define o tipo atual (recipe ou plan)
+  selectedAttachments.clear(); // Limpa seleções anteriores ao trocar de aba
+
   const list = document.getElementById("attach-list");
   const btnRec = document.getElementById("tab-recipe");
   const btnPlan = document.getElementById("tab-plan");
   list.innerHTML = "";
+  
   const items = type === "recipe" ? myLibrary : myPresets;
+  
+  // Atualiza visual dos botões das abas
   if (type === "recipe") {
-    btnRec.className =
-      "flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700 transition-colors";
-    btnPlan.className =
-      "flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500 transition-colors";
+    btnRec.className = "flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700 transition-colors";
+    btnPlan.className = "flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500 transition-colors";
   } else {
-    btnPlan.className =
-      "flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700 transition-colors";
-    btnRec.className =
-      "flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500 transition-colors";
+    btnPlan.className = "flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700 transition-colors";
+    btnRec.className = "flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500 transition-colors";
   }
+
   if (!items || items.length === 0) {
-    list.innerHTML =
-      '<div class="p-4 text-center text-sm text-slate-400">Vazio.</div>';
+    list.innerHTML = '<div class="p-4 text-center text-sm text-slate-400">Vazio.</div>';
     return;
   }
+
   items.forEach((i) => {
     const div = document.createElement("div");
     const chkId = `chk-${i.id}`;
-    div.className =
-      "p-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer flex items-center gap-3 select-none rounded-lg";
-    div.innerHTML = `<input type="checkbox" id="${chkId}" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" onclick="event.stopPropagation(); toggleSelection('${
-      i.id
-    }')"><label for="${chkId}" class="flex-1 cursor-pointer font-medium text-sm text-slate-700 flex items-center gap-2">${
-      type === "recipe"
-        ? `<span class="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-xs text-slate-500"><i class="fa-solid ${
-            i.icon || "fa-utensils"
-          }"></i></span>`
-        : '<i class="fa-solid fa-calendar-days text-indigo-400"></i>'
-    } ${i.name}</label>`;
+    div.className = "p-3 border-b border-slate-50 hover:bg-slate-50 cursor-pointer flex items-center gap-3 select-none rounded-lg";
+    
+    div.innerHTML = `
+      <input type="checkbox" id="${chkId}" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" onclick="event.stopPropagation(); toggleSelection('${i.id}')">
+      <label for="${chkId}" class="flex-1 cursor-pointer font-medium text-sm text-slate-700 flex items-center gap-2">
+        ${
+          type === "recipe"
+            ? `<span class="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-xs text-slate-500"><i class="fa-solid ${i.icon || "fa-utensils"}"></i></span>`
+            : '<i class="fa-solid fa-calendar-days text-indigo-400"></i>'
+        } ${i.name}
+      </label>`;
+      
     div.onclick = () => {
       document.getElementById(chkId).click();
     };
     list.appendChild(div);
   });
+
   if (items.length > 0) {
     const btn = document.createElement("button");
-    btn.className =
-      "w-full mt-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow transition-colors";
+    btn.className = "w-full mt-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow transition-colors";
     btn.innerText = "Confirmar Seleção";
     btn.onclick = confirmRecipePackage;
     list.appendChild(btn);
   }
 }
 function toggleSelection(id) {
-  if (selectedAttachments.has(id)) selectedAttachments.delete(id);
-  else selectedAttachments.add(id);
+  if (currentAttachType === "plan") {
+    // Lógica Exclusiva para Planos (apenas um por vez)
+    if (selectedAttachments.has(id)) {
+      selectedAttachments.delete(id);
+    } else {
+      selectedAttachments.clear(); // Remove qualquer outro plano selecionado
+      selectedAttachments.add(id); // Adiciona o atual
+
+      // Atualiza visualmente os checkboxes (desmarca os outros)
+      const checkboxes = document.querySelectorAll('#attach-list input[type="checkbox"]');
+      checkboxes.forEach((cb) => {
+        if (cb.id !== `chk-${id}`) cb.checked = false;
+      });
+    }
+  } else {
+    // Lógica para Receitas (múltiplas permitidas)
+    if (selectedAttachments.has(id)) selectedAttachments.delete(id);
+    else selectedAttachments.add(id);
+  }
 }
-//aasla
 
 function confirmRecipePackage() {
   if (selectedAttachments.size === 0)
