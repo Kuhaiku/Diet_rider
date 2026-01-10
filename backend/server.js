@@ -233,7 +233,30 @@ app.post('/api/community/post/:id/comment', verifyToken, (req, res) => {
         res.json({ msg: "Comentário adicionado" });
     });
 });
+// Denunciar Comentário
+app.post('/api/community/report/comment', verifyToken, (req, res) => {
+    const { comment_id, reason } = req.body;
+    const sql = 'INSERT INTO community_comment_reports (comment_id, reporter_id, reason) VALUES (?, ?, ?)';
+    db.query(sql, [comment_id, req.userId, reason], (err) => {
+        if (err) return res.status(500).json({ msg: "Erro ao reportar" });
+        res.json({ msg: "Denúncia recebida!" });
+    });
+});
 
+// (Opcional) Rota para o Dono ver denúncias de comentários
+app.get('/api/owner/reports/comments', verifyToken, verifyOwner, (req, res) => {
+    const sql = `
+        SELECT r.*, c.comment, u.name as reporter_name 
+        FROM community_comment_reports r
+        JOIN community_comments c ON r.comment_id = c.id
+        JOIN users u ON r.reporter_id = u.id
+        WHERE r.status = 'pending'
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ msg: "Erro SQL" });
+        res.json(results);
+    });
+});
 // Deletar comentário (Dono do comentário ou Dono do Sistema)
 app.delete('/api/community/comment/:id', verifyToken, (req, res) => {
     db.query('SELECT user_id FROM community_comments WHERE id = ?', [req.params.id], (err, results) => {

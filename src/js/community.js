@@ -21,7 +21,7 @@ let currentAttachType = 'recipe';
 let latestPostId = 0;
 let searchTimeout = null;
 let isSearching = false;
-
+let reportType = 'post'; // 'post' ou 'comment'
 // --- INICIALIZAÇÃO ---
 if (
   window.location.pathname.includes("community.html") ||
@@ -928,19 +928,65 @@ function deletePost(id) {
   );
 }
 
-function openReportModal(id) {
+// Abre o modal sabendo se é POST ou COMMENT
+function openReportModal(id, type = 'post') {
   if (!token) return (window.location.href = "login.html");
-  document.getElementById("report-post-id").value = id;
+  
+  reportType = type; // Define o tipo atual
+  document.getElementById("report-post-id").value = id; // Usa o mesmo input hidden para guardar o ID
+  
+  // Atualiza o título visualmente para o usuário saber o que está denunciando
+  const title = document.querySelector("#report-modal h3");
+  if(title) title.innerText = type === 'post' ? "Denunciar Postagem" : "Denunciar Comentário";
+  
   document.getElementById("report-modal").classList.remove("hidden");
 }
+
 function closeReportModal() {
   document.getElementById("report-modal").classList.add("hidden");
-}
-async function submitReport() {
-  notify("Denúncia enviada.");
-  closeReportModal();
+  document.getElementById("report-reason").value = ""; // Limpa o texto
 }
 
+async function submitReport() {
+  const id = document.getElementById("report-post-id").value;
+  const reason = document.getElementById("report-reason").value.trim();
+  
+  if (!reason) return notify("Informe o motivo.", "error");
+
+  let url = '';
+  let body = {};
+
+  if (reportType === 'post') {
+      url = `${API_BASE}/community/report`; // Rota antiga de posts (assumindo que existe no backend como /report)
+      // *NOTA: Se sua rota de post anterior era diferente, ajuste aqui.
+      // Baseado no seu server.js anterior, não vi a rota POST /api/community/report explicita no código que enviou antes, 
+      // mas vou assumir que você vai criar ou já tem. Vou focar no comentário:
+      body = { post_id: id, reason }; 
+  } else {
+      url = `${API_BASE}/community/report/comment`;
+      body = { comment_id: id, reason };
+  }
+  
+  // Caso você não tenha criado a rota de report de POST ainda, crie no server.js similar à de comentário:
+  // app.post('/api/community/report', ... INSERT INTO community_reports ...)
+
+  try {
+      const res = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body)
+      });
+      
+      if(res.ok) {
+          notify("Denúncia enviada.");
+          closeReportModal();
+      } else {
+          notify("Erro ao enviar.", "error");
+      }
+  } catch (e) {
+      notify("Erro de conexão.", "error");
+  }
+}
 // --- LÓGICA DE COMENTÁRIOS ---
 
 function toggleComments(postId) {
@@ -970,7 +1016,6 @@ function renderCommentsList(postId, comments) {
     const list = document.getElementById(`comments-list-${postId}`);
     const countEl = document.getElementById(`comments-count-${postId}`);
     
-    // Atualiza o contador visual
     if(countEl) countEl.innerText = comments.length;
 
     if (comments.length === 0) {
@@ -987,12 +1032,15 @@ function renderCommentsList(postId, comments) {
         return `
             <div class="flex gap-3 text-sm group/comment" id="comment-${c.id}">
                 <img src="${avatar}" class="w-8 h-8 rounded-full border border-slate-200 mt-1 cursor-pointer" onclick="window.location.href='perfil.html?id=${c.user_id}'">
-                <div class="flex-1 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                <div class="flex-1 bg-white p-3 rounded-lg border border-slate-100 shadow-sm relative">
                     <div class="flex justify-between items-start mb-1">
                         <span class="font-bold text-slate-700 text-xs hover:text-indigo-600 cursor-pointer" onclick="window.location.href='perfil.html?id=${c.user_id}'">${c.author_name}</span>
                         <div class="flex items-center gap-2">
                             <span class="text-[10px] text-slate-400">${new Date(c.created_at).toLocaleDateString()}</span>
-                            ${canDelete ? `<button onclick="deleteComment(${c.id}, ${postId})" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/comment:opacity-100"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
+                            
+                            ${canDelete ? `<button onclick="deleteComment(${c.id}, ${postId})" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/comment:opacity-100" title="Excluir"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
+                            
+                            ${!isMine ? `<button onclick="openReportModal(${c.id}, 'comment')" class="text-slate-300 hover:text-amber-500 transition-colors opacity-0 group-hover/comment:opacity-100" title="Denunciar"><i class="fa-solid fa-flag text-xs"></i></button>` : ''}
                         </div>
                     </div>
                     <p class="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">${c.comment}</p>
@@ -1000,11 +1048,7 @@ function renderCommentsList(postId, comments) {
             </div>
         `;
     }).join('');
-    
-    // Rola para o final da lista (opcional)
-    // list.scrollTop = list.scrollHeight;
 }
-
 async function submitComment(postId) {
     const input = document.getElementById(`comment-input-${postId}`);
     const text = input.value.trim();
