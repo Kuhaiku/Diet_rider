@@ -10,29 +10,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const targetId = urlParams.get("id") || (loggedUser ? loggedUser.id : null);
 const deepLinkPostId = urlParams.get("post");
 
-// --- INIT ---
-document.addEventListener("DOMContentLoaded", async () => {
-  const bioEl = document.getElementById("edit-bio");
-  if (bioEl) {
-    bioEl.addEventListener("input", function () {
-      document.getElementById("bio-counter").innerText = `${this.value.length}/255`;
-    });
-  }
-
-  if (typeof injectPreviewModal === "function") injectPreviewModal();
-
-  if (!targetId) {
-    alert("Perfil não encontrado.");
-    window.location.href = "community.html";
-    return;
-  }
-
-  setupSidebarLinks();
-  setupAuthUI();
-  await loadProfileData();
-  switchTab("posts");
-});
-
 function setupSidebarLinks() {
   const profileLink = document.getElementById("link-my-profile");
   if (loggedUser && loggedUser.id) {
@@ -54,6 +31,28 @@ function setupSidebarLinks() {
     if (profileLink) profileLink.href = "login.html";
   }
 }
+
+document.addEventListener("DOMContentLoaded", async () => {
+
+  const bioEl = document.getElementById("edit-bio");
+  if (bioEl) {
+    bioEl.addEventListener("input", function () {
+      document.getElementById("bio-counter").innerText = `${this.value.length}/255`;
+    });
+  }
+
+  if (!targetId) {
+    alert("Perfil não encontrado.");
+    window.location.href = "community.html";
+    return;
+  }
+
+  setupSidebarLinks();
+  setupAuthUI();
+  await loadProfileData();
+  switchTab("posts");
+});
+
 
 function toggleSidebar() {
   const sb = document.getElementById("sidebar");
@@ -519,39 +518,11 @@ function addSocialInput(name = "Instagram", url = "") {
   document.getElementById("social-list").appendChild(div);
 }
 
-document.getElementById("edit-bio").addEventListener("input", function () {
-  document.getElementById("bio-counter").innerText = `${this.value.length}/255`;
-}); // --- CONFIGURAÇÃO ---
-
-
 // !!! COLOQUE SUAS CHAVES AQUI !!!
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dhu8un8ty/image/upload";
 const CLOUDINARY_PRESET = "diet_userperfil";
 
 let profileUser = {};
-
-
-// --- INIT ---
-document.addEventListener("DOMContentLoaded", async () => {
-  const bioEl = document.getElementById("edit-bio");
-  if (bioEl) {
-    bioEl.addEventListener("input", function () {
-      document.getElementById("bio-counter").innerText = `${this.value.length}/255`;
-    });
-  }
-
-  if (!targetId) {
-    alert("Perfil não encontrado.");
-    window.location.href = "community.html";
-    return;
-  }
-
-  setupSidebarLinks();
-  setupAuthUI();
-  await loadProfileData();
-  switchTab("posts");
-});
-
 
 function setupSidebarLinks() {
   const profileLink = document.getElementById("link-my-profile");
