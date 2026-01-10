@@ -533,8 +533,12 @@ let profileUser = {};
 
 // --- INIT ---
 document.addEventListener("DOMContentLoaded", async () => {
-  // Injeta modal se necessário (função pode estar em community.js ou definida aqui se preferir)
-  if (typeof injectPreviewModal === "function") injectPreviewModal();
+  const bioEl = document.getElementById("edit-bio");
+  if (bioEl) {
+    bioEl.addEventListener("input", function () {
+      document.getElementById("bio-counter").innerText = `${this.value.length}/255`;
+    });
+  }
 
   if (!targetId) {
     alert("Perfil não encontrado.");
@@ -546,19 +550,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAuthUI();
   await loadProfileData();
   switchTab("posts");
-
-  if (deepLinkPostId) {
-    setTimeout(() => {
-      const el = document.getElementById(`post-${deepLinkPostId}`);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Garante que a função global exista (vinda do community.js carregado no HTML)
-        if (typeof openPostDetails === "function")
-          openPostDetails(parseInt(deepLinkPostId));
-      }
-    }, 1000);
-  }
 });
+
 
 function setupSidebarLinks() {
   const profileLink = document.getElementById("link-my-profile");
