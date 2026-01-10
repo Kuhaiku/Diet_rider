@@ -6,8 +6,9 @@ services:
     build: ./backend
     container_name: dietcms-backend
     restart: always
-    # Não expomos portas para fora (host), apenas internamente na rede
-    # O Nginx vai acessar este serviço via http://backend:3000
+    ports:
+      - "3000:3000"
+    # Aqui a mágica acontece: Passamos as variáveis do EasyPanel para o container
     environment:
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
@@ -29,9 +30,10 @@ services:
     build: ./src
     container_name: dietcms-frontend
     restart: always
+    ports:
+      - "80:80" # EasyPanel vai expor a porta 80 automaticamente
     depends_on:
       - backend
-    # EasyPanel detectará a porta 80 EXPOSE do Dockerfile para criar o domínio
     networks:
       - diet-network
 
