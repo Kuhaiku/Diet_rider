@@ -115,6 +115,22 @@
         </div>
     </div>
 
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 hidden z-[60] flex items-center justify-center backdrop-blur-sm p-4 fade-in">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-xs overflow-hidden border border-slate-200 transform transition-all scale-100">
+            <div class="p-4 text-center">
+                <div class="w-8 h-8 bg-red-50 text-red-500 rounded-full flex items-center justify-center text-lg mx-auto mb-2 border border-red-100">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+                <h3 class="font-bold text-sm text-slate-800 mb-1">Tem certeza?</h3>
+                <p class="text-[10px] text-slate-500 mb-3 leading-relaxed" id="confirm-msg">Essa ação é irreversível.</p>
+                <div class="flex gap-2 justify-center">
+                    <button onclick="resolveConfirm(false)" class="flex-1 px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded">Cancelar</button>
+                    <button onclick="resolveConfirm(true)" class="flex-1 px-3 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded shadow">Sim, Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <script src="js/community.js"></script>
 </body>
 </html>
