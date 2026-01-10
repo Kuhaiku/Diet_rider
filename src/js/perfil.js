@@ -1,20 +1,3 @@
-// --- CONFIGURAÇÃO ---
-const IS_DEV_PERFIL =
-  window.location.port === "8080" || window.location.port === "5500";
-const API_BASE_PERFIL = IS_DEV_PERFIL
-  ? `http://${window.location.hostname}:3000/api`
-  : "/api";
-
-// !!! COLOQUE SUAS CHAVES AQUI !!!
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dhu8un8ty/image/upload";
-const CLOUDINARY_PRESET = "diet_userperfil";
-
-let profileUser = {};
-const loggedUser = JSON.parse(localStorage.getItem("user")) || null;
-const urlParams = new URLSearchParams(window.location.search);
-const targetId = urlParams.get("id") || (loggedUser ? loggedUser.id : null);
-const deepLinkPostId = urlParams.get("post");
-
 // --- INIT ---
 document.addEventListener("DOMContentLoaded", async () => {
   // Injeta modal se necessário (função pode estar em community.js ou definida aqui se preferir)
