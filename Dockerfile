@@ -13,16 +13,16 @@ COPY backend/ .
 # 3. Configura o Frontend (Move os arquivos HTML para a pasta do Nginx)
 COPY src/ /usr/share/nginx/html
 
-# 4. Configura o Nginx (Cria a config direto aqui)
-# ADICIONADO: client_max_body_size e location /api
+# 4. Configura o Nginx (CRÍTICO: Aqui definimos as rotas /api e /auth manualmente)
 RUN echo 'server { \
     listen 80; \
-    client_max_body_size 50M; \
+    server_name localhost; \
     root /usr/share/nginx/html; \
     index login.html; \
+    client_max_body_size 50M; \
     \
     location /auth { \
-        proxy_pass http://127.0.0.1:3000; \
+        proxy_pass http://127.0.0.1:3000/auth; \
         proxy_http_version 1.1; \
         proxy_set_header Upgrade $http_upgrade; \
         proxy_set_header Connection "upgrade"; \
@@ -30,7 +30,7 @@ RUN echo 'server { \
     } \
     \
     location /api { \
-        proxy_pass http://127.0.0.1:3000; \
+        proxy_pass http://127.0.0.1:3000/api; \
         proxy_http_version 1.1; \
         proxy_set_header Upgrade $http_upgrade; \
         proxy_set_header Connection "upgrade"; \
@@ -39,6 +39,11 @@ RUN echo 'server { \
     \
     location / { \
         try_files $uri $uri/ /login.html; \
+    } \
+    \
+    location ~* \.(css|js|png|jpg|jpeg|gif|ico)$ { \
+        expires 1y; \
+        add_header Cache-Control "public, no-transform"; \
     } \
 }' > /etc/nginx/http.d/default.conf
 
