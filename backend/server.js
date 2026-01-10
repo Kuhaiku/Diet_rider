@@ -143,7 +143,7 @@ app.get('/api/public/user/:id/likes', verifyToken, (req, res) => {
 
 // --- ROTAS DA COMUNIDADE ---
 
-// 1. ROTA DE BUSCA DE USUÁRIOS (Esta é a rota que estava faltando e dando erro 404)
+// 1. ROTA DE BUSCA DE USUÁRIOS
 app.get('/api/community/users', verifyToken, (req, res) => {
     const search = req.query.q;
     const showAll = req.query.all === 'true'; 
@@ -151,10 +151,8 @@ app.get('/api/community/users', verifyToken, (req, res) => {
     if (!search || search.trim().length === 0) return res.json([]); 
 
     const term = `%${search}%`;
-    // Busca simples por nome
     let sql = `SELECT id, name, avatar, bio FROM users WHERE name LIKE ?`;
     
-    // Se não for "ver todos", limita a 6 resultados
     if (!showAll) {
         sql += ` LIMIT 6`;
     }
@@ -178,7 +176,6 @@ app.get('/api/community/posts', verifyToken, (req, res) => {
     `;
     const params = [req.userId];
     
-    // Filtro de busca unificado para posts
     if (search) {
         sql += ` WHERE p.title LIKE ? OR p.description LIKE ? OR u.name LIKE ?`;
         const term = `%${search}%`;
@@ -236,15 +233,64 @@ app.delete('/api/community/post/:id', verifyToken, (req, res) => {
     });
 });
 
-// --- ROTAS DE CONFIG ---
-app.get('/api/library', verifyToken, (req, res) => { db.query('SELECT data FROM recipes WHERE user_id = ?', [req.userId], (err, r) => res.json(r ? r.map(x=>x.data) : [])); });
-app.post('/api/library', verifyToken, (req, res) => { const r=req.body; db.query('DELETE FROM recipes WHERE user_id=? AND front_id=?',[req.userId,r.id],()=>{ db.query('INSERT INTO recipes (user_id,front_id,data) VALUES (?,?,?)',[req.userId,r.id,JSON.stringify(r)],(e)=>res.json({msg:"Salvo"})) }); });
-app.get('/api/presets', verifyToken, (req, res) => { db.query('SELECT data FROM saved_plans WHERE user_id = ? ORDER BY created_at DESC', [req.userId], (err, r) => res.json(r ? r.map(x=>x.data) : [])); });
-app.post('/api/presets', verifyToken, (req, res) => { const p=req.body; db.query('INSERT INTO saved_plans (user_id,front_id,name,data) VALUES (?,?,?,?)',[req.userId,p.id,p.name,JSON.stringify(p)],(e)=>res.json({msg:"Salvo"})); });
-app.put('/api/presets/:id', verifyToken, (req, res) => { const { name } = req.body; db.query('SELECT data FROM saved_plans WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err, results) => { if (err || results.length === 0) return res.status(500).json({ error: "Erro/Não encontrado" }); let planData = results[0].data; planData.name = name; db.query('UPDATE saved_plans SET name = ?, data = ? WHERE user_id = ? AND front_id = ?', [name, JSON.stringify(planData), req.userId, req.params.id], (err) => { if (err) return res.status(500).json({ msg: "Erro SQL" }); res.json({ msg: "Renomeado" }); }); }); });
-app.delete('/api/presets/:id', verifyToken, (req, res) => { db.query('DELETE FROM saved_plans WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err) => { if (err) return res.status(500).json({ msg: "Erro SQL" }); res.json({ msg: "Preset Deletado" }); }); });
-app.get('/api/planner', verifyToken, (req, res) => { db.query('SELECT planner_data, themes_data FROM app_state WHERE user_id = ?', [req.userId], (err, results) => { if (err) return res.status(500).json({ msg: "Erro SQL" }); res.json(results[0] || { planner_data: {}, themes_data: {} }); }); });
-app.post('/api/planner', verifyToken, (req, res) => { const { planner, themes } = req.body; const sql = `INSERT INTO app_state (user_id, planner_data, themes_data) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE planner_data = VALUES(planner_data), themes_data = VALUES(themes_data)`; db.query(sql, [req.userId, JSON.stringify(planner), JSON.stringify(themes)], (err) => { if (err) return res.status(500).json({ msg: "Erro SQL" }); res.json({ msg: "Estado Salvo" }); }); });
+// --- ROTAS DE CONFIG E DADOS PESSOAIS ---
+
+// Rotas de Receitas (Library)
+app.get('/api/library', verifyToken, (req, res) => { 
+    db.query('SELECT data FROM recipes WHERE user_id = ?', [req.userId], (err, r) => res.json(r ? r.map(x=>x.data) : [])); 
+});
+app.post('/api/library', verifyToken, (req, res) => { 
+    const r=req.body; 
+    db.query('DELETE FROM recipes WHERE user_id=? AND front_id=?',[req.userId,r.id],()=>{ 
+        db.query('INSERT INTO recipes (user_id,front_id,data) VALUES (?,?,?)',[req.userId,r.id,JSON.stringify(r)],(e)=>res.json({msg:"Salvo"})) 
+    }); 
+});
+
+// !!! NOVA ROTA ADICIONADA: EXCLUIR RECEITA !!!
+app.delete('/api/library/:id', verifyToken, (req, res) => {
+    db.query('DELETE FROM recipes WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err, result) => {
+        if (err) return res.status(500).json({ msg: "Erro ao deletar receita" });
+        res.json({ msg: "Receita deletada!" });
+    });
+});
+
+// Rotas de Presets (Planos Salvos)
+app.get('/api/presets', verifyToken, (req, res) => { 
+    db.query('SELECT data FROM saved_plans WHERE user_id = ? ORDER BY created_at DESC', [req.userId], (err, r) => res.json(r ? r.map(x=>x.data) : [])); 
+});
+app.post('/api/presets', verifyToken, (req, res) => { 
+    const p=req.body; 
+    db.query('INSERT INTO saved_plans (user_id,front_id,name,data) VALUES (?,?,?,?)',[req.userId,p.id,p.name,JSON.stringify(p)],(e)=>res.json({msg:"Salvo"})); 
+});
+app.put('/api/presets/:id', verifyToken, (req, res) => { 
+    const { name } = req.body; 
+    db.query('SELECT data FROM saved_plans WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err, results) => { 
+        if (err || results.length === 0) return res.status(500).json({ error: "Erro/Não encontrado" }); 
+        let planData = results[0].data; planData.name = name; 
+        db.query('UPDATE saved_plans SET name = ?, data = ? WHERE user_id = ? AND front_id = ?', [name, JSON.stringify(planData), req.userId, req.params.id], (err) => { 
+            if (err) return res.status(500).json({ msg: "Erro SQL" }); res.json({ msg: "Renomeado" }); 
+        }); 
+    }); 
+});
+app.delete('/api/presets/:id', verifyToken, (req, res) => { 
+    db.query('DELETE FROM saved_plans WHERE user_id = ? AND front_id = ?', [req.userId, req.params.id], (err) => { 
+        if (err) return res.status(500).json({ msg: "Erro SQL" }); res.json({ msg: "Preset Deletado" }); 
+    }); 
+});
+
+// Rotas do Planner (Estado Atual)
+app.get('/api/planner', verifyToken, (req, res) => { 
+    db.query('SELECT planner_data, themes_data FROM app_state WHERE user_id = ?', [req.userId], (err, results) => { 
+        if (err) return res.status(500).json({ msg: "Erro SQL" }); res.json(results[0] || { planner_data: {}, themes_data: {} }); 
+    }); 
+});
+app.post('/api/planner', verifyToken, (req, res) => { 
+    const { planner, themes } = req.body; 
+    const sql = `INSERT INTO app_state (user_id, planner_data, themes_data) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE planner_data = VALUES(planner_data), themes_data = VALUES(themes_data)`; 
+    db.query(sql, [req.userId, JSON.stringify(planner), JSON.stringify(themes)], (err) => { 
+        if (err) return res.status(500).json({ msg: "Erro SQL" }); res.json({ msg: "Estado Salvo" }); 
+    }); 
+});
 
 // --- ADMIN STATS ---
 app.get('/api/owner/stats', verifyToken, verifyOwner, (req, res) => {
