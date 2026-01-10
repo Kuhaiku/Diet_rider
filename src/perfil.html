@@ -132,11 +132,23 @@
                 <button onclick="closeEditProfile()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="p-4 overflow-y-auto space-y-4 custom-scrollbar">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Bio</label>
-                    <textarea id="edit-bio" class="w-full border border-slate-200 rounded-lg p-3 text-sm focus:border-indigo-500 outline-none resize-none h-24" placeholder="Fale sobre você..."></textarea>
-                    <div class="text-right text-[10px] text-slate-400 mt-1" id="bio-counter">0/255</div>
+                <div class="space-y-2 pt-3 border-t border-slate-100">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-500">
+                    Curtidas públicas
+                    <input type="checkbox" id="edit-likes-public" class="accent-indigo-600">
+                </label>
+
+                <label class="flex items-center justify-between text-xs font-bold text-slate-500">
+                    Planos públicos
+                    <input type="checkbox" id="edit-plans-public" class="accent-indigo-600">
+                </label>
+
+                <label class="flex items-center justify-between text-xs font-bold text-slate-500">
+                    Receitas públicas
+                    <input type="checkbox" id="edit-recipes-public" class="accent-indigo-600">
+                </label>
                 </div>
+
                 
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Redes Sociais</label>

@@ -200,20 +200,22 @@ async function loadProfileLikes() {
 }
 
 async function loadProfilePlans() {
-  // Verificação de segurança: Só o dono vê seus planos (Limitação da API atual)
-  if (!loggedUser || loggedUser.id != targetId) {
-    renderPrivateMessage(
-      "Planos Pessoais",
-      "Apenas o dono do perfil pode ver seus planos salvos."
-    );
-    return;
-  }
-
   try {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${API_BASE_PERFIL}/presets`, {
+    const res = await fetch(`${API_BASE_PERFIL}/public/user/${targetId}/plans`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+
+    if (res.status === 403) {
+      renderPrivateMessage(
+        "Planos Privados",
+        "Este usuário ocultou seus planos."
+      );
+      return;
+    }
+
+    if (!res.ok) throw new Error("Erro API");
+
     const plans = await res.json();
 
     if (!plans || plans.length === 0) {
@@ -225,26 +227,33 @@ async function loadProfilePlans() {
     let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
     plans.forEach((plan) => {
       html += `
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-slate-800 text-lg">${
-                              plan.name || "Plano Sem Nome"
-                            }</h3>
-                            <p class="text-xs text-slate-400 mt-1"><i class="fa-regular fa-clock"></i> Salvo na conta</p>
-                        </div>
-                        <div class="bg-indigo-50 text-indigo-600 rounded-lg px-2 py-1">
-                            <i class="fa-solid fa-calendar-days"></i>
-                        </div>
-                    </div>
-                    <div class="mt-4 pt-4 border-t border-slate-100">
-                        <p class="text-sm text-slate-500 mb-2">Contém dados de dieta e treino.</p>
-                        <span class="text-xs font-bold text-indigo-500">Disponível em "Meus Planos"</span>
-                    </div>
-                </div>
-            `;
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="font-bold text-slate-800 text-lg">
+                ${plan.name || "Plano Sem Nome"}
+              </h3>
+              <p class="text-xs text-slate-400 mt-1">
+                <i class="fa-regular fa-clock"></i> Salvo na conta
+              </p>
+            </div>
+            <div class="bg-indigo-50 text-indigo-600 rounded-lg px-2 py-1">
+              <i class="fa-solid fa-calendar-days"></i>
+            </div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-slate-100">
+            <p class="text-sm text-slate-500 mb-2">
+              Contém dados de dieta e treino.
+            </p>
+            <span class="text-xs font-bold text-indigo-500">
+              Disponível em "Meus Planos"
+            </span>
+          </div>
+        </div>
+      `;
     });
     html += "</div>";
+
     document.getElementById("profile-feed").innerHTML = html;
   } catch (e) {
     console.error(e);
@@ -253,20 +262,24 @@ async function loadProfilePlans() {
   }
 }
 
-async function loadProfileRecipes() {
-  if (!loggedUser || loggedUser.id != targetId) {
-    renderPrivateMessage(
-      "Livro de Receitas",
-      "As receitas deste usuário são privadas."
-    );
-    return;
-  }
 
+async function loadProfileRecipes() {
   try {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${API_BASE_PERFIL}/library`, {
+    const res = await fetch(`${API_BASE_PERFIL}/public/user/${targetId}/recipes`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+
+    if (res.status === 403) {
+      renderPrivateMessage(
+        "Receitas Privadas",
+        "Este usuário ocultou suas receitas."
+      );
+      return;
+    }
+
+    if (!res.ok) throw new Error("Erro API");
+
     const recipes = await res.json();
 
     if (!recipes || recipes.length === 0) {
@@ -282,31 +295,30 @@ async function loadProfileRecipes() {
         "https://images.unsplash.com/photo-1495521841625-f342588d6165?q=80&w=400&auto=format&fit=crop";
 
       html += `
-                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                    <div class="h-32 bg-cover bg-center" style="background-image: url('${bgImage}')"></div>
-                    <div class="p-4">
-                        <h3 class="font-bold text-slate-800 mb-1 line-clamp-1">${
-                          recipe.title || "Receita Sem Título"
-                        }</h3>
-                        <p class="text-xs text-slate-500 line-clamp-2 mb-3">${
-                          recipe.instructions
-                            ? recipe.instructions.substring(0, 80) + "..."
-                            : "Sem descrição."
-                        }</p>
-                        <div class="flex items-center justify-between mt-2">
-                             <span class="text-[10px] bg-green-50 text-green-700 px-2 py-1 rounded-full font-bold">
-                                ${
-                                  recipe.calories
-                                    ? recipe.calories + " kcal"
-                                    : "N/A"
-                                }
-                             </span>
-                        </div>
-                    </div>
-                </div>
-            `;
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+          <div class="h-32 bg-cover bg-center" style="background-image:url('${bgImage}')"></div>
+          <div class="p-4">
+            <h3 class="font-bold text-slate-800 mb-1 line-clamp-1">
+              ${recipe.title || "Receita Sem Título"}
+            </h3>
+            <p class="text-xs text-slate-500 line-clamp-2 mb-3">
+              ${
+                recipe.instructions
+                  ? recipe.instructions.substring(0, 80) + "..."
+                  : "Sem descrição."
+              }
+            </p>
+            <div class="flex items-center justify-between mt-2">
+              <span class="text-[10px] bg-green-50 text-green-700 px-2 py-1 rounded-full font-bold">
+                ${recipe.calories ? recipe.calories + " kcal" : "N/A"}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
     });
     html += "</div>";
+
     document.getElementById("profile-feed").innerHTML = html;
   } catch (e) {
     console.error(e);
@@ -407,6 +419,10 @@ async function uploadAvatar(input) {
 function openEditProfile() {
   document.getElementById("edit-modal").classList.remove("hidden");
   document.getElementById("edit-bio").value = profileUser.bio || "";
+  document.getElementById("edit-likes-public").checked = profileUser.likes_public == 1;
+  document.getElementById("edit-plans-public").checked = profileUser.plans_public == 1;
+  document.getElementById("edit-recipes-public").checked = profileUser.recipes_public == 1;
+
 
   // Limpa lista atual e recria inputs com dados salvos
   const container = document.getElementById("social-list");
@@ -444,7 +460,9 @@ async function saveProfile(silent = false) {
     bio: bio,
     avatar: profileUser.avatar,
     social_links: newLinks,
-    likes_public: profileUser.likes_public,
+    likes_public: document.getElementById("edit-likes-public").checked,
+    plans_public: document.getElementById("edit-plans-public").checked,
+    recipes_public: document.getElementById("edit-recipes-public").checked,
   };
 
   const token = localStorage.getItem("token");
@@ -460,12 +478,16 @@ async function saveProfile(silent = false) {
   // Atualiza objeto local
   profileUser.bio = bio;
   profileUser.social_links = newLinks;
+  profileUser.likes_public = payload.likes_public ? 1 : 0;
+  profileUser.plans_public = payload.plans_public ? 1 : 0;
+  profileUser.recipes_public = payload.recipes_public ? 1 : 0;
 
   if (!silent) {
     closeEditProfile();
     loadProfileData();
   }
 }
+
 
 function addSocialInput(name = "Instagram", url = "") {
   const div = document.createElement("div");
@@ -627,6 +649,8 @@ async function loadProfileData() {
       document.getElementById("privacy-control").classList.remove("hidden");
       document.getElementById("toggle-privacy").checked =
         profileUser.likes_public === 1;
+        profileUser.plans_public = profileUser.plans_public || 0;
+        profileUser.recipes_public = profileUser.recipes_public || 0;
     }
   } catch (e) {
     console.error(e);
@@ -919,6 +943,9 @@ async function uploadAvatar(input) {
 function openEditProfile() {
   document.getElementById("edit-modal").classList.remove("hidden");
   document.getElementById("edit-bio").value = profileUser.bio || "";
+  document.getElementById("edit-likes-public").checked = profileUser.likes_public == 1;
+  document.getElementById("edit-plans-public").checked = profileUser.plans_public == 1;
+  document.getElementById("edit-recipes-public").checked = profileUser.recipes_public == 1;
 
   // Limpa lista atual e recria inputs com dados salvos
   const container = document.getElementById("social-list");
@@ -953,10 +980,12 @@ async function saveProfile(silent = false) {
   });
 
   const payload = {
-    bio: bio,
+    bio,
     avatar: profileUser.avatar,
     social_links: newLinks,
-    likes_public: profileUser.likes_public,
+    likes_public: document.getElementById("edit-likes-public").checked,
+    plans_public: document.getElementById("edit-plans-public").checked,
+    recipes_public: document.getElementById("edit-recipes-public").checked
   };
 
   const token = localStorage.getItem("token");
