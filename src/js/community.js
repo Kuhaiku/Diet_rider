@@ -296,20 +296,25 @@ function renderFeed(posts, targetId = "community-feed") {
         ? "text-red-600 bg-red-50 font-bold ring-1 ring-red-200"
         : "";
 
+    // HTML do container de comentários (inicialmente escondido)
+    const commentsHtml = `
+      <div id="comments-section-${p.id}" class="hidden border-t border-slate-100 bg-slate-50/50 p-4">
+          <div id="comments-list-${p.id}" class="space-y-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
+              <div class="text-center text-slate-400 text-xs py-2"><i class="fa-solid fa-circle-notch fa-spin"></i> Carregando...</div>
+          </div>
+          <div class="flex gap-2">
+              <input type="text" id="comment-input-${p.id}" placeholder="Escreva um comentário..." class="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" onkeydown="if(event.key === 'Enter') submitComment(${p.id})">
+              <button onclick="submitComment(${p.id})" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-4 py-2 text-sm font-bold transition-colors"><i class="fa-solid fa-paper-plane"></i></button>
+          </div>
+      </div>
+    `;
+
     let html = `
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in relative group mb-6 scroll-mt-24" id="post-${
-          p.id
-        }">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in relative group mb-6 scroll-mt-24" id="post-${p.id}">
             <div class="p-4 flex justify-between items-start">
-                <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='perfil.html?id=${
-                  p.user_id
-                }'">
+                <div class="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity" onclick="window.location.href='perfil.html?id=${p.user_id}'">
                     ${avatarHtml}
-                    <div><h3 class="font-bold text-slate-800 leading-tight hover:text-indigo-600 transition-colors">${
-                      p.title
-                    }</h3><p class="text-xs text-slate-500">por <span class="font-bold text-indigo-600">${
-      p.author_name
-    }</span> • ${new Date(p.created_at).toLocaleDateString()}</p></div>
+                    <div><h3 class="font-bold text-slate-800 leading-tight hover:text-indigo-600 transition-colors">${p.title}</h3><p class="text-xs text-slate-500">por <span class="font-bold text-indigo-600">${p.author_name}</span> • ${new Date(p.created_at).toLocaleDateString()}</p></div>
                 </div>
                 <div class="relative">
                     ${
@@ -319,13 +324,9 @@ function renderFeed(posts, targetId = "community-feed") {
                     }
                 </div>
             </div>
-            <div class="px-4 pb-2"><p class="text-sm text-slate-600 whitespace-pre-line">${
-              p.description
-            }</p></div>
+            <div class="px-4 pb-2"><p class="text-sm text-slate-600 whitespace-pre-line">${p.description}</p></div>
             <div class="px-4 pb-4">
-                <button onclick="openPostDetails(${
-                  p.id
-                })" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg p-3 flex items-center justify-between group/btn transition-all">
+                <button onclick="openPostDetails(${p.id})" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg p-3 flex items-center justify-between group/btn transition-all">
                     <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-indigo-500 group-hover/btn:scale-110 transition-transform"><i class="fa-solid ${typeIcon}"></i></div><div class="text-left"><p class="text-xs text-slate-400 font-bold uppercase">Conteúdo</p><p class="text-sm font-bold text-slate-700">${typeLabel}</p></div></div>
                     <div class="text-indigo-600 text-sm font-bold flex items-center gap-2">Ver <i class="fa-solid fa-arrow-right"></i></div>
                 </button>
@@ -337,24 +338,19 @@ function renderFeed(posts, targetId = "community-feed") {
             }
             <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <button onclick="vote(${
-                      p.id
-                    }, 'like')" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-green-100 text-slate-500 hover:text-green-600 transition-colors ${likeClass}"><i class="fa-solid fa-thumbs-up"></i> <span id="likes-${
-      p.id
-    }">${p.likes_count}</span></button>
-                    <button onclick="vote(${
-                      p.id
-                    }, 'dislike')" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-red-100 text-slate-500 hover:text-red-600 transition-colors ${dislikeClass}"><i class="fa-solid fa-thumbs-down"></i></button>
+                    <button onclick="vote(${p.id}, 'like')" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-green-100 text-slate-500 hover:text-green-600 transition-colors ${likeClass}"><i class="fa-solid fa-thumbs-up"></i> <span id="likes-${p.id}">${p.likes_count}</span></button>
+                    <button onclick="vote(${p.id}, 'dislike')" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-red-100 text-slate-500 hover:text-red-600 transition-colors ${dislikeClass}"><i class="fa-solid fa-thumbs-down"></i></button>
+                    
+                    <button onclick="toggleComments(${p.id})" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-indigo-100 text-slate-500 hover:text-indigo-600 transition-colors">
+                        <i class="fa-regular fa-comment-dots"></i> <span id="comments-count-${p.id}">${p.comments_count}</span>
+                    </button>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="sharePost(${p.id}, ${
-      p.user_id
-    })" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-colors"><i class="fa-solid fa-link"></i></button>
-                    <button onclick="prepareImport(${
-                      p.id
-                    })" class="px-4 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-full hover:bg-slate-900 shadow-md flex items-center gap-2 active:scale-95"><i class="fa-solid fa-download"></i> <span>Importar</span></button>
+                    <button onclick="sharePost(${p.id}, ${p.user_id})" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-colors"><i class="fa-solid fa-link"></i></button>
+                    <button onclick="prepareImport(${p.id})" class="px-4 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-full hover:bg-slate-900 shadow-md flex items-center gap-2 active:scale-95"><i class="fa-solid fa-download"></i> <span>Importar</span></button>
                 </div>
             </div>
+            ${commentsHtml}
         </div>`;
     feed.innerHTML += html;
   });
@@ -943,4 +939,122 @@ function closeReportModal() {
 async function submitReport() {
   notify("Denúncia enviada.");
   closeReportModal();
+}
+
+// --- LÓGICA DE COMENTÁRIOS ---
+
+function toggleComments(postId) {
+    const section = document.getElementById(`comments-section-${postId}`);
+    if (section.classList.contains('hidden')) {
+        section.classList.remove('hidden');
+        loadComments(postId);
+    } else {
+        section.classList.add('hidden');
+    }
+}
+
+async function loadComments(postId) {
+    const list = document.getElementById(`comments-list-${postId}`);
+    try {
+        const res = await fetch(`${API_BASE}/community/post/${postId}/comments`, { headers });
+        if (res.ok) {
+            const comments = await res.json();
+            renderCommentsList(postId, comments);
+        }
+    } catch (e) {
+        list.innerHTML = '<p class="text-xs text-red-400 text-center">Erro ao carregar.</p>';
+    }
+}
+
+function renderCommentsList(postId, comments) {
+    const list = document.getElementById(`comments-list-${postId}`);
+    const countEl = document.getElementById(`comments-count-${postId}`);
+    
+    // Atualiza o contador visual
+    if(countEl) countEl.innerText = comments.length;
+
+    if (comments.length === 0) {
+        list.innerHTML = '<p class="text-xs text-slate-400 text-center italic py-2">Seja o primeiro a comentar!</p>';
+        return;
+    }
+
+    list.innerHTML = comments.map(c => {
+        const isMine = c.user_id === user.id;
+        const isOwner = user.is_owner;
+        const canDelete = isMine || isOwner;
+        const avatar = c.author_avatar || `https://ui-avatars.com/api/?name=${c.author_name}&background=random`;
+
+        return `
+            <div class="flex gap-3 text-sm group/comment" id="comment-${c.id}">
+                <img src="${avatar}" class="w-8 h-8 rounded-full border border-slate-200 mt-1 cursor-pointer" onclick="window.location.href='perfil.html?id=${c.user_id}'">
+                <div class="flex-1 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="font-bold text-slate-700 text-xs hover:text-indigo-600 cursor-pointer" onclick="window.location.href='perfil.html?id=${c.user_id}'">${c.author_name}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-slate-400">${new Date(c.created_at).toLocaleDateString()}</span>
+                            ${canDelete ? `<button onclick="deleteComment(${c.id}, ${postId})" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/comment:opacity-100"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
+                        </div>
+                    </div>
+                    <p class="text-slate-600 text-sm whitespace-pre-wrap leading-relaxed">${c.comment}</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Rola para o final da lista (opcional)
+    // list.scrollTop = list.scrollHeight;
+}
+
+async function submitComment(postId) {
+    const input = document.getElementById(`comment-input-${postId}`);
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Feedback visual imediato (Opcional: desabilitar input)
+    input.disabled = true;
+
+    try {
+        const res = await fetch(`${API_BASE}/community/post/${postId}/comment`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ comment: text })
+        });
+        
+        if (res.ok) {
+            input.value = "";
+            loadComments(postId); // Recarrega a lista
+        } else {
+            notify("Erro ao enviar comentário.", "error");
+        }
+    } catch (e) {
+        notify("Erro de conexão.", "error");
+    } finally {
+        input.disabled = false;
+        input.focus();
+    }
+}
+
+async function deleteComment(commentId, postId) {
+    if(!confirm("Apagar comentário?")) return;
+    
+    try {
+        const res = await fetch(`${API_BASE}/community/comment/${commentId}`, {
+            method: 'DELETE',
+            headers
+        });
+        if (res.ok) {
+            // Remove visualmente ou recarrega
+            const el = document.getElementById(`comment-${commentId}`);
+            if(el) el.remove();
+            // Atualiza contador baixando em 1 (truque visual rápido)
+            const countEl = document.getElementById(`comments-count-${postId}`);
+            if(countEl) countEl.innerText = Math.max(0, parseInt(countEl.innerText) - 1);
+            
+            // Se quiser consistência total, chame loadComments(postId) em vez disso.
+        } else {
+            notify("Erro ao apagar.", "error");
+        }
+    } catch (e) {
+        notify("Erro ao apagar.", "error");
+    }
 }

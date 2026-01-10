@@ -163,13 +163,15 @@ app.get('/api/community/users', verifyToken, (req, res) => {
     });
 });
 
-// 2. Feed Geral com Busca de Posts
+
+// 2. Feed Geral com Busca de Posts (ATUALIZADO)
 app.get('/api/community/posts', verifyToken, (req, res) => {
     const search = req.query.q;
     let sql = `
         SELECT p.*, u.name as author_name, u.avatar as author_avatar,
         (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'like') as likes_count,
         (SELECT COUNT(*) FROM community_votes v WHERE v.post_id = p.id AND v.vote_type = 'dislike') as dislikes_count,
+        (SELECT COUNT(*) FROM community_comments c WHERE c.post_id = p.id) as comments_count, 
         (SELECT vote_type FROM community_votes v WHERE v.post_id = p.id AND v.user_id = ?) as my_vote
         FROM community_posts p
         JOIN users u ON p.user_id = u.id
@@ -199,6 +201,56 @@ app.post('/api/community/post', verifyToken, (req, res) => {
         db.query(sql, [req.userId, title, description, youtube_link, JSON.stringify(content_json)], (err) => {
             if (err) return res.status(500).json({ msg: "Erro ao postar" });
             res.json({ msg: "Postado!" });
+        });
+    });
+});
+
+// --- ROTAS DE COMENTÁRIOS ---
+
+// Listar comentários de um post
+app.get('/api/community/post/:id/comments', verifyToken, (req, res) => {
+    const sql = `
+        SELECT c.*, u.name as author_name, u.avatar as author_avatar, u.id as author_id
+        FROM community_comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.post_id = ?
+        ORDER BY c.created_at ASC
+    `;
+    db.query(sql, [req.params.id], (err, results) => {
+        if (err) return res.status(500).json({ msg: "Erro ao buscar comentários" });
+        res.json(results);
+    });
+});
+
+// Adicionar comentário
+app.post('/api/community/post/:id/comment', verifyToken, (req, res) => {
+    const { comment } = req.body;
+    if (!comment || comment.trim().length === 0) return res.status(400).json({ msg: "Comentário vazio" });
+    
+    const sql = 'INSERT INTO community_comments (post_id, user_id, comment) VALUES (?, ?, ?)';
+    db.query(sql, [req.params.id, req.userId, comment], (err) => {
+        if (err) return res.status(500).json({ msg: "Erro ao comentar" });
+        res.json({ msg: "Comentário adicionado" });
+    });
+});
+
+// Deletar comentário (Dono do comentário ou Dono do Sistema)
+app.delete('/api/community/comment/:id', verifyToken, (req, res) => {
+    db.query('SELECT user_id FROM community_comments WHERE id = ?', [req.params.id], (err, results) => {
+        if (err || results.length === 0) return res.status(404).json({ msg: "Comentário não encontrado" });
+        const commentOwnerId = results[0].user_id;
+        
+        db.query('SELECT email FROM users WHERE id = ?', [req.userId], (err, userRes) => {
+            const isSystemOwner = (userRes[0].email === process.env.OWNER_EMAIL);
+            
+            if (req.userId !== commentOwnerId && !isSystemOwner) {
+                return res.status(403).json({ msg: "Não autorizado" });
+            }
+            
+            db.query('DELETE FROM community_comments WHERE id = ?', [req.params.id], (err) => {
+                if (err) return res.status(500).json({ msg: "Erro ao deletar" });
+                res.json({ msg: "Comentário removido" });
+            });
         });
     });
 });

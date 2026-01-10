@@ -1,0 +1,1 @@
+quero implementar um chatzinho onde só pode enviar texto, e queria fazer essa troca de mensagens ser segura tipo criptografada, queria que fosse um chatzinho tipo o do facebook/mensegar que quero que ele fique por cima de todas as páginas igual ao faceboock mesmo queria pensar primeiro em como pode ser desenvolvido isso e como seria a melhor forma de armazenamento
