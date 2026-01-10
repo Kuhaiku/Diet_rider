@@ -119,3 +119,42 @@ function renderPrivateMessage(title, subtitle) {
   document.getElementById("profile-feed").innerHTML =
     `<div class="text-center py-10">${title}<br>${subtitle}</div>`;
 }
+function openEditProfile() {
+  document.getElementById("edit-modal").classList.remove("hidden");
+  document.getElementById("edit-bio").value = profileUser.bio || "";
+
+  document.getElementById("edit-likes-public").checked = profileUser.likes_public == 1;
+  document.getElementById("edit-plans-public").checked = profileUser.plans_public == 1;
+  document.getElementById("edit-recipes-public").checked = profileUser.recipes_public == 1;
+
+  const container = document.getElementById("social-list");
+  container.innerHTML = "";
+
+  const links =
+    typeof profileUser.social_links === "string"
+      ? JSON.parse(profileUser.social_links)
+      : profileUser.social_links || [];
+
+  links.forEach(l => addSocialInput(l.name, l.url));
+}
+
+function closeEditProfile() {
+  document.getElementById("edit-modal").classList.add("hidden");
+}
+
+function addSocialInput(name = "Instagram", url = "") {
+  const div = document.createElement("div");
+  div.className = "flex gap-2 items-center social-row";
+  div.innerHTML = `
+    <select class="s-name w-1/3 bg-slate-50 border border-slate-200 rounded px-2 py-2 text-xs">
+      <option value="Instagram" ${name==="Instagram"?"selected":""}>Instagram</option>
+      <option value="YouTube" ${name==="YouTube"?"selected":""}>YouTube</option>
+      <option value="TikTok" ${name==="TikTok"?"selected":""}>TikTok</option>
+      <option value="Site" ${name==="Site"?"selected":""}>Site</option>
+    </select>
+    <input class="s-url flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-2 text-xs" value="${url}">
+    <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-red-500">
+      <i class="fa-solid fa-trash"></i>
+    </button>`;
+  document.getElementById("social-list").appendChild(div);
+}
