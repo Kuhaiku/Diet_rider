@@ -1,3 +1,10 @@
+const IS_DEV_PERFIL =
+  window.location.port === "8080" || window.location.port === "5500";
+
+const API_BASE_PERFIL = IS_DEV_PERFIL
+  ? `http://${window.location.hostname}:3000/api`
+  : "/api";
+
 const loggedUser = JSON.parse(localStorage.getItem("user")) || null;
 const urlParams = new URLSearchParams(window.location.search);
 const targetId = urlParams.get("id") || (loggedUser ? loggedUser.id : null);
@@ -515,11 +522,7 @@ function addSocialInput(name = "Instagram", url = "") {
 document.getElementById("edit-bio").addEventListener("input", function () {
   document.getElementById("bio-counter").innerText = `${this.value.length}/255`;
 }); // --- CONFIGURAÇÃO ---
-const IS_DEV_PERFIL =
-  window.location.port === "8080" || window.location.port === "5500";
-const API_BASE_PERFIL = IS_DEV_PERFIL
-  ? `http://${window.location.hostname}:3000/api`
-  : "/api";
+
 
 // !!! COLOQUE SUAS CHAVES AQUI !!!
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dhu8un8ty/image/upload";
@@ -1028,6 +1031,3 @@ function addSocialInput(name = "Instagram", url = "") {
   document.getElementById("social-list").appendChild(div);
 }
 
-document.getElementById("edit-bio").addEventListener("input", function () {
-  document.getElementById("bio-counter").innerText = `${this.value.length}/255`;
-});
