@@ -1,171 +1,63 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Perfil | Diet & Ride</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; height: 100dvh; overflow: hidden; }
-        .fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Perfil</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
-<body class="flex flex-col md:flex-row bg-slate-50">
+<body class="bg-slate-100">
 
-    <div id="mobile-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden fade-in"></div>
+<main class="max-w-4xl mx-auto p-4">
 
-    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-72 bg-white border-r border-slate-200 transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col shadow-2xl md:shadow-none h-full">
-        <div class="p-6 border-b border-slate-100 flex justify-between items-center flex-shrink-0">
-            <h1 class="font-bold text-xl text-slate-900 tracking-tight flex items-center gap-2">
-                <i class="fa-solid fa-bicycle text-indigo-600"></i> Diet & Ride
-            </h1>
-            <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-red-500 transition-colors">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-4 space-y-2">
-            <div class="px-2 mb-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Social</div>
-            <a href="community.html" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
-                <i class="fa-solid fa-users w-6"></i> Feed Geral
-            </a>
-            <a id="link-my-profile" href="#" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
-                <i class="fa-solid fa-user-circle w-6"></i> Meu Perfil
-            </a>
-            <div class="border-t border-slate-100 my-4"></div>
-            <div class="px-2 mb-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Ferramentas</div>
-            <a href="admin.html?view=planner" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
-                <i class="fa-solid fa-calendar-days w-6"></i> Meus Planos
-            </a>
-            <a href="admin.html?view=library" class="flex items-center w-full px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-xl transition-colors">
-                <i class="fa-solid fa-box-open w-6"></i> Biblioteca
-            </a>
-        </div>
-
-        <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex-shrink-0">
-            <button onclick="logout()" class="flex items-center w-full px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-colors gap-2">
-                <i class="fa-solid fa-right-from-bracket"></i> Sair
-            </button>
-        </div>
-    </aside>
-
-    <div class="md:hidden h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-20 flex-shrink-0 w-full">
-        <span class="font-bold text-lg text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-user text-indigo-600"></i> Perfil
-        </span>
-        <button onclick="toggleSidebar()" class="p-2 text-slate-600 bg-slate-50 rounded-lg border border-slate-200">
-            <i class="fa-solid fa-bars text-xl"></i>
-        </button>
+  <div class="bg-white rounded-xl p-6 shadow mb-6">
+    <div class="flex items-center gap-4">
+      <img id="profile-avatar" class="w-24 h-24 rounded-full object-cover border">
+      <div>
+        <h1 id="profile-name" class="text-2xl font-bold"></h1>
+        <p id="profile-bio" class="text-slate-500 text-sm"></p>
+      </div>
+      <button id="btn-edit-profile" onclick="openEditProfile()" class="ml-auto hidden bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs">
+        Editar Perfil
+      </button>
     </div>
+    <div id="profile-links" class="flex gap-2 mt-4 flex-wrap"></div>
+  </div>
 
-    <main class="flex-1 overflow-y-auto bg-slate-100 md:ml-72 transition-all duration-300 min-h-0 relative">
-        <div class="max-w-3xl mx-auto p-4 md:p-8 pb-24 fade-in">
-            
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6 relative">
-                <div class="h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
-                <div class="px-6 pb-6">
-                    <div class="relative flex justify-between items-end -mt-12 mb-4">
-                        <div class="relative">
-                            <img id="profile-avatar" src="https://ui-avatars.com/api/?name=User&background=random" class="w-24 h-24 rounded-full border-4 border-white shadow-md object-cover bg-white">
-                            <button id="btn-edit-avatar" onclick="document.getElementById('upload-avatar').click()" class="hidden absolute bottom-0 right-0 w-8 h-8 bg-slate-800 text-white rounded-full border-2 border-white flex items-center justify-center hover:bg-black transition-colors shadow-sm cursor-pointer">
-                                <i class="fa-solid fa-camera text-xs"></i>
-                            </button>
-                            <input type="file" id="upload-avatar" class="hidden" accept="image/*" onchange="uploadAvatar(this)">
-                        </div>
-                        <button id="btn-edit-profile" onclick="openEditProfile()" class="hidden px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-lg border border-slate-200 hover:bg-slate-200 transition-colors">
-                            <i class="fa-solid fa-pen mr-1"></i> Editar Perfil
-                        </button>
-                        <div id="auth-actions" class="hidden"></div>
-                    </div>
-                    
-                    <h1 id="profile-name" class="text-2xl font-bold text-slate-800 leading-tight">Carregando...</h1>
-                    <p id="profile-bio" class="text-slate-500 text-sm mt-2 whitespace-pre-line">...</p>
-                    
-                    <div id="profile-links" class="flex flex-wrap gap-2 mt-4">
-                    </div>
-                </div>
-            </div>
-
-            <div id="privacy-control" class="hidden mb-4 flex items-center justify-end">
-                <label class="inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggle-privacy" class="sr-only peer" onchange="togglePrivacy()">
-                    <div class="relative w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                    <span class="ms-3 text-xs font-medium text-slate-500">Minhas curtidas são públicas</span>
-                </label>
-            </div>
-
-            <div class="flex border-b border-slate-200 mb-6 bg-white rounded-lg shadow-sm px-2 overflow-x-auto">
-                <button onclick="switchTab('posts')" id="tab-posts" class="flex-1 py-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition-colors whitespace-nowrap px-4">
-                    Postagens
-                </button>
-                <button onclick="switchTab('likes')" id="tab-likes" class="flex-1 py-3 text-sm font-medium text-slate-400 hover:text-slate-600 border-b-2 border-transparent transition-colors whitespace-nowrap px-4">
-                    Curtidas
-                </button>
-                <button onclick="switchTab('plans')" id="tab-plans" class="flex-1 py-3 text-sm font-medium text-slate-400 hover:text-slate-600 border-b-2 border-transparent transition-colors whitespace-nowrap px-4">
-                    Planos
-                </button>
-                <button onclick="switchTab('recipes')" id="tab-recipes" class="flex-1 py-3 text-sm font-medium text-slate-400 hover:text-slate-600 border-b-2 border-transparent transition-colors whitespace-nowrap px-4">
-                    Receitas
-                </button>
-            </div>
-
-            <div id="profile-feed" class="space-y-6">
-                <div class="text-center py-10">
-                    <i class="fa-solid fa-circle-notch fa-spin text-indigo-500 text-2xl"></i>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <div id="edit-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-fade-in">
-            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-slate-800">Editar Perfil</h3>
-                <button onclick="closeEditProfile()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="p-4 overflow-y-auto space-y-4 custom-scrollbar">
-                <div class="space-y-2 pt-3 border-t border-slate-100">
-                <label class="flex items-center justify-between text-xs font-bold text-slate-500">
-                    Curtidas públicas
-                    <input type="checkbox" id="edit-likes-public" class="accent-indigo-600">
-                </label>
-
-                <label class="flex items-center justify-between text-xs font-bold text-slate-500">
-                    Planos públicos
-                    <input type="checkbox" id="edit-plans-public" class="accent-indigo-600">
-                </label>
-
-                <label class="flex items-center justify-between text-xs font-bold text-slate-500">
-                    Receitas públicas
-                    <input type="checkbox" id="edit-recipes-public" class="accent-indigo-600">
-                </label>
-                </div>
-
-                
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Redes Sociais</label>
-                    <div id="social-list" class="space-y-2"></div>
-                    <button onclick="addSocialInput()" class="w-full py-2 border border-dashed border-slate-300 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 mt-2">
-                        + Adicionar Link
-                    </button>
-                </div>
-            </div>
-            <div class="p-4 border-t border-slate-100 bg-white flex justify-end">
-                <button onclick="saveProfile()" class="px-6 py-2 bg-indigo-600 text-white font-bold text-sm rounded-lg hover:bg-indigo-700 shadow-lg">Salvar Alterações</button>
-            </div>
-        </div>
+  <div class="bg-white rounded-xl shadow p-4">
+    <div class="flex border-b">
+      <button id="tab-posts" onclick="switchTab('posts')" class="px-4 py-2 text-slate-400">Posts</button>
+      <button id="tab-likes" onclick="switchTab('likes')" class="px-4 py-2 text-slate-400">Curtidas</button>
+      <button id="tab-plans" onclick="switchTab('plans')" class="px-4 py-2 text-slate-400">Planos</button>
+      <button id="tab-recipes" onclick="switchTab('recipes')" class="px-4 py-2 text-slate-400">Receitas</button>
     </div>
+    <div id="profile-feed" class="p-4"></div>
+  </div>
 
-    <script src="js/community.js"></script>
-    <script src="js/compressor.js"></script>
-    <script src="js/perfil.js"></script>
+</main>
+
+<!-- MODAL EDITAR PERFIL -->
+<div id="edit-modal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center">
+  <div class="bg-white w-full max-w-md rounded-xl p-6">
+    <h2 class="font-bold mb-2">Editar Perfil</h2>
+
+    <textarea id="edit-bio" class="w-full border p-2 mb-2" placeholder="Sua bio..."></textarea>
+
+    <label class="flex justify-between text-xs">Curtidas públicas <input type="checkbox" id="edit-likes-public"></label>
+    <label class="flex justify-between text-xs">Planos públicos <input type="checkbox" id="edit-plans-public"></label>
+    <label class="flex justify-between text-xs">Receitas públicas <input type="checkbox" id="edit-recipes-public"></label>
+
+    <h3 class="text-xs font-bold mt-4 mb-2">Redes sociais</h3>
+    <div id="social-list"></div>
+    <button onclick="addSocialInput()" class="text-xs text-indigo-600 mb-4">+ Adicionar</button>
+
+    <div class="flex justify-end gap-2">
+      <button onclick="closeEditProfile()" class="text-xs">Cancelar</button>
+      <button onclick="saveProfile()" class="bg-indigo-600 text-white px-4 py-2 rounded text-xs">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="perfil.js"></script>
 </body>
 </html>
