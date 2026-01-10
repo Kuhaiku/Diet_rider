@@ -13,8 +13,7 @@ const headers = {
 const user = JSON.parse(localStorage.getItem("user")) || {};
 
 // Globais
-// CORREÇÃO: Usar window.allPosts para compartilhar dados com perfil.js
-window.allPosts = []; 
+let allPosts = [];
 let myLibrary = [];
 let myPresets = [];
 let selectedAttachments = new Set();
@@ -23,7 +22,6 @@ let latestPostId = 0;
 let searchTimeout = null;
 let isSearching = false;
 let reportType = 'post'; // 'post' ou 'comment'
-
 // --- INICIALIZAÇÃO ---
 if (
   window.location.pathname.includes("community.html") ||
@@ -94,9 +92,7 @@ async function loadPosts(query = "") {
     if (!res.ok) throw new Error("Erro API");
     const posts = await res.json();
 
-    // CORREÇÃO: Atualizar a variável global window
-    window.allPosts = posts;
-    
+    allPosts = posts;
     if (!query && Array.isArray(posts) && posts.length > 0)
       latestPostId = posts[0].id;
 
@@ -116,6 +112,7 @@ async function searchUsers(query, fetchAll = false) {
   if (!container) return;
 
   try {
+    // Se fetchAll for true, adiciona parâmetro &all=true na URL
     const url = `${API_BASE}/community/users?q=${encodeURIComponent(query)}${
       fetchAll ? "&all=true" : ""
     }`;
@@ -123,6 +120,7 @@ async function searchUsers(query, fetchAll = false) {
     const res = await fetch(url, { headers });
     if (res.ok) {
       const users = await res.json();
+      // Passa os dados e flags para a renderização
       renderUserResults(users, fetchAll, query);
     }
   } catch (e) {
@@ -141,11 +139,13 @@ function renderUserResults(users, isFullList, query) {
 
   container.innerHTML = `<p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Pessoas Encontradas</p>`;
 
+  // Lógica do botão "Ver Mais"
+  // Se não pedimos a lista completa e vieram 6 itens, mostramos 5 + botão
   let displayUsers = users;
   let showButton = false;
 
   if (!isFullList && users.length > 5) {
-    displayUsers = users.slice(0, 5); 
+    displayUsers = users.slice(0, 5); // Corta para mostrar só 5
     showButton = true;
   }
 
@@ -153,7 +153,7 @@ function renderUserResults(users, isFullList, query) {
     const avatarSrc =
       u.avatar ||
       `https://ui-avatars.com/api/?name=${u.name}&background=random`;
-    
+    // Clicar leva para o perfil
     const html = `
             <div onclick="window.location.href='perfil.html?id=${
               u.id
@@ -174,6 +174,7 @@ function renderUserResults(users, isFullList, query) {
     container.innerHTML += html;
   });
 
+  // Se tiver mais gente, renderiza o botão
   if (showButton) {
     const btnDiv = document.createElement("div");
     btnDiv.className = "text-center pt-1";
@@ -182,6 +183,7 @@ function renderUserResults(users, isFullList, query) {
                 Ver todos os resultados para "${query}"
             </button>
         `;
+    // Adiciona evento de clique para buscar tudo
     btnDiv.querySelector("button").onclick = () => searchUsers(query, true);
     container.appendChild(btnDiv);
   }
@@ -203,8 +205,8 @@ function debounceSearch() {
   searchTimeout = setTimeout(() => {
     if (term.length > 0) {
       isSearching = true;
-      searchUsers(term); 
-      loadPosts(term); 
+      searchUsers(term); // Busca pessoas
+      loadPosts(term); // Busca posts
     } else {
       isSearching = false;
       clearUserResults();
@@ -294,7 +296,7 @@ function renderFeed(posts, targetId = "community-feed") {
         ? "text-red-600 bg-red-50 font-bold ring-1 ring-red-200"
         : "";
 
-    // HTML do container de comentários
+    // HTML do container de comentários (inicialmente escondido)
     const commentsHtml = `
       <div id="comments-section-${p.id}" class="hidden border-t border-slate-100 bg-slate-50/50 p-4">
           <div id="comments-list-${p.id}" class="space-y-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
@@ -307,7 +309,6 @@ function renderFeed(posts, targetId = "community-feed") {
       </div>
     `;
 
-    // CORREÇÃO: Adicionado || 0 para evitar undefined nos contadores
     let html = `
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden fade-in relative group mb-6 scroll-mt-24" id="post-${p.id}">
             <div class="p-4 flex justify-between items-start">
@@ -337,11 +338,11 @@ function renderFeed(posts, targetId = "community-feed") {
             }
             <div class="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <button onclick="vote(${p.id}, 'like')" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-green-100 text-slate-500 hover:text-green-600 transition-colors ${likeClass}"><i class="fa-solid fa-thumbs-up"></i> <span id="likes-${p.id}">${p.likes_count || 0}</span></button>
+                    <button onclick="vote(${p.id}, 'like')" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-green-100 text-slate-500 hover:text-green-600 transition-colors ${likeClass}"><i class="fa-solid fa-thumbs-up"></i> <span id="likes-${p.id}">${p.likes_count}</span></button>
                     <button onclick="vote(${p.id}, 'dislike')" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-red-100 text-slate-500 hover:text-red-600 transition-colors ${dislikeClass}"><i class="fa-solid fa-thumbs-down"></i></button>
                     
                     <button onclick="toggleComments(${p.id})" class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-indigo-100 text-slate-500 hover:text-indigo-600 transition-colors">
-                        <i class="fa-regular fa-comment-dots"></i> <span id="comments-count-${p.id}">${p.comments_count || 0}</span>
+                        <i class="fa-regular fa-comment-dots"></i> <span id="comments-count-${p.id}">${p.comments_count}</span>
                     </button>
                 </div>
                 <div class="flex gap-2">
@@ -403,8 +404,8 @@ function closeAttachModal() {
   document.getElementById("attach-modal")?.classList.add("hidden");
 }
 function loadAttachList(type) {
-  currentAttachType = type; 
-  selectedAttachments.clear(); 
+  currentAttachType = type; // Define o tipo atual (recipe ou plan)
+  selectedAttachments.clear(); // Limpa seleções anteriores ao trocar de aba
 
   const list = document.getElementById("attach-list");
   const btnRec = document.getElementById("tab-recipe");
@@ -413,6 +414,7 @@ function loadAttachList(type) {
   
   const items = type === "recipe" ? myLibrary : myPresets;
   
+  // Atualiza visual dos botões das abas
   if (type === "recipe") {
     btnRec.className = "flex-1 py-2 text-xs font-bold rounded bg-indigo-100 text-indigo-700 transition-colors";
     btnPlan.className = "flex-1 py-2 text-xs font-bold rounded hover:bg-slate-100 text-slate-500 transition-colors";
@@ -457,18 +459,21 @@ function loadAttachList(type) {
 }
 function toggleSelection(id) {
   if (currentAttachType === "plan") {
+    // Lógica Exclusiva para Planos (apenas um por vez)
     if (selectedAttachments.has(id)) {
       selectedAttachments.delete(id);
     } else {
-      selectedAttachments.clear();
-      selectedAttachments.add(id);
+      selectedAttachments.clear(); // Remove qualquer outro plano selecionado
+      selectedAttachments.add(id); // Adiciona o atual
 
+      // Atualiza visualmente os checkboxes (desmarca os outros)
       const checkboxes = document.querySelectorAll('#attach-list input[type="checkbox"]');
       checkboxes.forEach((cb) => {
         if (cb.id !== `chk-${id}`) cb.checked = false;
       });
     }
   } else {
+    // Lógica para Receitas (múltiplas permitidas)
     if (selectedAttachments.has(id)) selectedAttachments.delete(id);
     else selectedAttachments.add(id);
   }
@@ -539,14 +544,12 @@ async function createPost() {
 }
 let currentPreviewData = null;
 function openPostDetails(postId) {
-  // CORREÇÃO: Usar window.allPosts
-  const post = window.allPosts.find((p) => p.id === postId);
+  const post = allPosts.find((p) => p.id === postId);
   if (!post) return;
   openPreviewModalGeneric(post.content_json, post.title, false);
 }
 function prepareImport(postId) {
-  // CORREÇÃO: Usar window.allPosts
-  const post = window.allPosts.find((p) => p.id === postId);
+  const post = allPosts.find((p) => p.id === postId);
   if (!post) return;
   openPreviewModalGeneric(post.content_json, post.title, true);
 }
@@ -954,13 +957,19 @@ async function submitReport() {
   let body = {};
 
   if (reportType === 'post') {
-      url = `${API_BASE}/community/report`; 
+      url = `${API_BASE}/community/report`; // Rota antiga de posts (assumindo que existe no backend como /report)
+      // *NOTA: Se sua rota de post anterior era diferente, ajuste aqui.
+      // Baseado no seu server.js anterior, não vi a rota POST /api/community/report explicita no código que enviou antes, 
+      // mas vou assumir que você vai criar ou já tem. Vou focar no comentário:
       body = { post_id: id, reason }; 
   } else {
       url = `${API_BASE}/community/report/comment`;
       body = { comment_id: id, reason };
   }
   
+  // Caso você não tenha criado a rota de report de POST ainda, crie no server.js similar à de comentário:
+  // app.post('/api/community/report', ... INSERT INTO community_reports ...)
+
   try {
       const res = await fetch(url, {
           method: 'POST',
