@@ -3,7 +3,7 @@ const IS_DEV_PERFIL = window.location.port === "8080" || window.location.port ==
 const API_BASE_PERFIL = IS_DEV_PERFIL ? `http://${window.location.hostname}:3000/api` : "/api";
 
 // !!! COLOQUE SUAS CHAVES AQUI !!!
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/SEU_CLOUD_NAME_AQUI/image/upload";
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dhu8un8ty/image/upload";
 const CLOUDINARY_PRESET = "diet_userperfil"; // Seu preset Unsigned
 
 let profileUser = {}; 
