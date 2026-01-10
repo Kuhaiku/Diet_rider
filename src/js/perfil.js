@@ -49,8 +49,10 @@ function switchTab(tab) {
 
 async function loadProfilePosts() {
   const r = await fetch(`${API}/public/user/${targetId}/posts`);
-  document.getElementById("profile-feed").innerHTML = JSON.stringify(await r.json());
+  const posts = await r.json();
+  renderProfilePosts(posts);
 }
+
 
 async function loadProfileLikes() {
   const r = await fetch(`${API}/public/user/${targetId}/likes`, {
@@ -97,6 +99,36 @@ function openEditProfile() {
 function closeEditProfile() {
   document.getElementById("edit-modal").classList.add("hidden");
 }
+function renderProfilePosts(posts) {
+  const feed = document.getElementById("profile-feed");
+
+  if (!posts || posts.length === 0) {
+    feed.innerHTML = `<p class="text-center text-slate-400">Nenhum post ainda.</p>`;
+    return;
+  }
+
+  feed.innerHTML = posts.map(p => `
+    <div class="bg-white p-4 rounded-xl border shadow-sm hover:shadow-md transition">
+      <div class="flex items-center gap-3 mb-3">
+        <img src="${p.author_avatar || 'https://ui-avatars.com/api/?name='+p.author_name}"
+             class="w-10 h-10 rounded-full">
+        <div>
+          <p class="text-sm font-bold text-slate-700">${p.author_name}</p>
+          <p class="text-xs text-slate-400">${new Date(p.created_at).toLocaleDateString()}</p>
+        </div>
+      </div>
+
+      <p class="text-sm text-slate-700 mb-3 whitespace-pre-line">
+        ${p.description || ""}
+      </p>
+
+      <div class="flex items-center gap-4 text-xs text-slate-500">
+        <span><i class="fa-solid fa-thumbs-up text-indigo-500"></i> ${p.likes_count || 0}</span>
+        <span><i class="fa-regular fa-comment"></i> ${p.comments_count || 0}</span>
+      </div>
+    </div>
+  `).join("");
+}
 
 function addSocialInput(name = "Instagram", url = "") {
   const div = document.createElement("div");
@@ -142,3 +174,4 @@ window.saveProfile = saveProfile;
 window.closeEditProfile = closeEditProfile;
 window.switchTab = switchTab;
 window.addSocialInput = addSocialInput;
+
